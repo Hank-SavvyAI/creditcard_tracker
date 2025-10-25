@@ -5,6 +5,8 @@ import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { api } from '@/lib/api'
 
+export const runtime = 'edge'
+
 export default function EditCardPage() {
   const router = useRouter()
   const params = useParams()
