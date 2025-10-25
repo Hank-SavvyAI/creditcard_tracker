@@ -64,13 +64,7 @@ export async function subscribeToPushNotifications(
 ): Promise<PushSubscription | null> {
   try {
     // Get or register service worker
-    let registration = await navigator.serviceWorker.ready;
-    if (!registration) {
-      registration = await registerServiceWorker();
-      if (!registration) {
-        throw new Error('Failed to register service worker');
-      }
-    }
+    const registration = await navigator.serviceWorker.ready;
 
     // Check if already subscribed
     let subscription = await registration.pushManager.getSubscription();
