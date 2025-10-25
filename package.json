@@ -4,12 +4,15 @@
   "private": true,
   "workspaces": [
     "apps/frontend",
-    "apps/backend"
+    "apps/backend",
+    "apps/website"
   ],
   "scripts": {
     "dev:frontend": "npm run dev --workspace=apps/frontend",
     "dev:backend": "npm run dev --workspace=apps/backend",
+    "dev:website": "npm run dev --workspace=apps/website",
     "build:frontend": "npm run build --workspace=apps/frontend",
-    "build:backend": "npm run build --workspace=apps/backend"
+    "build:backend": "npm run build --workspace=apps/backend",
+    "build:website": "npm run build --workspace=apps/website"
   }
 }
