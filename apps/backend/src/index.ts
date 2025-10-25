@@ -27,6 +27,7 @@ app.use(cors({
     'http://localhost:9000',
     'http://poioit.tplinkdns.com:9000',
     'http://poioit.tplinkdns.com',
+    'https://benefits.savvyaihelper.com',
     process.env.FRONTEND_URL
   ].filter(Boolean) as string[],
   credentials: true

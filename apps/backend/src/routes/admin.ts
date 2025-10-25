@@ -123,4 +123,37 @@ router.post('/manual/archive-expired-benefits', async (req: AuthRequest, res) =>
   }
 });
 
+// Get all users (admin only)
+router.get('/users', async (req: AuthRequest, res) => {
+  try {
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        telegramId: true,
+        isAdmin: true,
+        language: true,
+        createdAt: true,
+        _count: {
+          select: {
+            userCards: true,
+            userBenefits: true,
+            pushSubscriptions: true,
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+    res.json(users);
+  } catch (error: any) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;

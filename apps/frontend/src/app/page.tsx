@@ -38,6 +38,41 @@ export default function Home() {
         </ul>
       </div>
 
+      {/* 瀏覽信用卡按鈕 */}
+      {isMounted && (
+        <div style={{ textAlign: 'center', margin: '2rem 0' }}>
+          <Link
+            href="/cards"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '1rem 2.5rem',
+              fontSize: '1.1rem',
+              fontWeight: '600',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              borderRadius: '50px',
+              textDecoration: 'none',
+              boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
+              transition: 'all 0.3s ease',
+              transform: 'translateY(0)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)'
+              e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.6)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)'
+              e.currentTarget.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.4)'
+            }}
+          >
+            <span style={{ fontSize: '1.3rem' }}>💳</span>
+            {t('home.btn.browse', language)}
+          </Link>
+        </div>
+      )}
+
       {isMounted && !isLoggedIn && (
         <div className="login-methods" style={{
           margin: '2rem auto',
@@ -56,16 +91,36 @@ export default function Home() {
               background: 'white',
               borderRadius: '8px',
               border: '2px solid #0088cc',
+              display: 'flex',
+              flexDirection: 'column',
             }}>
               <h4 style={{ margin: '0 0 0.75rem 0', color: '#0088cc', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <span style={{ fontSize: '1.5rem' }}>💬</span>
                 {language === 'zh-TW' ? 'Telegram 登入' : 'Telegram Login'}
               </h4>
-              <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.9rem', lineHeight: '1.6' }}>
+              <ul style={{ margin: '0 0 1rem 0', paddingLeft: '1.25rem', fontSize: '0.9rem', lineHeight: '1.6', flex: 1 }}>
                 <li>{language === 'zh-TW' ? '⚡ 即時通知到 Telegram' : '⚡ Instant Telegram notifications'}</li>
                 <li>{language === 'zh-TW' ? '🤖 直接在 Bot 中操作' : '🤖 Operate directly in bot'}</li>
                 <li>{language === 'zh-TW' ? '📱 手機最快收到提醒' : '📱 Fastest mobile alerts'}</li>
               </ul>
+              <a
+                href="/auth/telegram"
+                style={{
+                  display: 'block',
+                  padding: '0.75rem',
+                  background: '#0088cc',
+                  color: 'white',
+                  textAlign: 'center',
+                  borderRadius: '8px',
+                  textDecoration: 'none',
+                  fontWeight: '500',
+                  transition: 'background 0.2s',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#006699'}
+                onMouseLeave={(e) => e.currentTarget.style.background = '#0088cc'}
+              >
+                {language === 'zh-TW' ? '使用 Telegram 登入' : 'Sign in with Telegram'}
+              </a>
             </div>
 
             {/* Google Login Info */}
@@ -74,16 +129,45 @@ export default function Home() {
               background: 'white',
               borderRadius: '8px',
               border: '2px solid #4285F4',
+              display: 'flex',
+              flexDirection: 'column',
             }}>
               <h4 style={{ margin: '0 0 0.75rem 0', color: '#4285F4', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <span style={{ fontSize: '1.5rem' }}>🌐</span>
                 {language === 'zh-TW' ? 'Google 登入' : 'Google Login'}
               </h4>
-              <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.9rem', lineHeight: '1.6' }}>
+              <ul style={{ margin: '0 0 1rem 0', paddingLeft: '1.25rem', fontSize: '0.9rem', lineHeight: '1.6', flex: 1 }}>
                 <li>{language === 'zh-TW' ? '📧 Email 通知' : '📧 Email notifications'}</li>
                 <li>{language === 'zh-TW' ? '🔔 瀏覽器推播通知' : '🔔 Browser push notifications'}</li>
                 <li>{language === 'zh-TW' ? '💻 適合網頁為主的使用者' : '💻 Best for web users'}</li>
               </ul>
+              <a
+                href={`${process.env.NEXT_PUBLIC_API_URL}/api/auth/google`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                  padding: '0.75rem',
+                  background: '#4285F4',
+                  color: 'white',
+                  textAlign: 'center',
+                  borderRadius: '8px',
+                  textDecoration: 'none',
+                  fontWeight: '500',
+                  transition: 'background 0.2s',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#3367D6'}
+                onMouseLeave={(e) => e.currentTarget.style.background = '#4285F4'}
+              >
+                <svg width="18" height="18" viewBox="0 0 18 18">
+                  <path fill="#fff" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
+                  <path fill="#fff" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
+                  <path fill="#fff" d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707 0-.593.102-1.17.282-1.709V4.96H.957C.347 6.175 0 7.55 0 9c0 1.452.348 2.827.957 4.042l3.007-2.335z"/>
+                  <path fill="#fff" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
+                </svg>
+                {language === 'zh-TW' ? '使用 Google 登入' : 'Sign in with Google'}
+              </a>
             </div>
           </div>
           <p style={{
@@ -100,42 +184,14 @@ export default function Home() {
         </div>
       )}
 
-      <div className="auth-buttons">
-        {!isMounted ? (
-          <div style={{ height: '48px' }}></div>
-        ) : isLoggedIn ? (
+      {/* 已登入：顯示前往儀表板按鈕 */}
+      {isMounted && isLoggedIn && (
+        <div className="auth-buttons">
           <Link href="/dashboard" className="btn-primary">
             {t('home.btn.dashboard', language)}
           </Link>
-        ) : (
-          <>
-            <Link href="/cards" className="btn-secondary">
-              {t('home.btn.browse', language)}
-            </Link>
-            <a
-              href={`${process.env.NEXT_PUBLIC_API_URL}/api/auth/google`}
-              className="btn-primary"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                justifyContent: 'center',
-              }}
-            >
-              <svg width="18" height="18" viewBox="0 0 18 18">
-                <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
-                <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
-                <path fill="#FBBC05" d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707 0-.593.102-1.17.282-1.709V4.96H.957C.347 6.175 0 7.55 0 9c0 1.452.348 2.827.957 4.042l3.007-2.335z"/>
-                <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
-              </svg>
-              {language === 'zh-TW' ? '使用 Google 登入' : 'Sign in with Google'}
-            </a>
-            <a href="/auth/telegram" className="btn-secondary">
-              {t('home.btn.login', language)}
-            </a>
-          </>
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="info-section">
         <h3>🚀 {t('home.howto', language)}</h3>

@@ -121,7 +121,7 @@ async function sendEmailNotification(email: string, name: string, title: string,
   }
 
   const mailOptions = {
-    from: `"信用卡福利追蹤器" <${process.env.EMAIL_USER}>`,
+    from: `"Credit Card Tracker | 信用卡福利追蹤器" <${process.env.EMAIL_USER}>`,
     to: email,
     subject: title,
     html: `
