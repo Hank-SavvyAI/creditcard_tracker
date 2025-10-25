@@ -75,10 +75,9 @@ export async function subscribeToPushNotifications(
       const { publicKey } = await response.json();
 
       // Subscribe
-      const applicationServerKey = urlBase64ToUint8Array(publicKey);
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: applicationServerKey.buffer,
+        applicationServerKey: urlBase64ToUint8Array(publicKey) as BufferSource,
       });
     }
 
