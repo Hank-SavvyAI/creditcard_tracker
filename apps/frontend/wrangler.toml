@@ -1,0 +1,15 @@
+name = "creditcard-tracker-frontend"
+compatibility_date = "2024-01-01"
+
+# Pages 專案配置
+pages_build_output_dir = ".vercel/output/static"
+
+[env.production]
+# 生產環境環境變數（可以在 Cloudflare Dashboard 設定）
+# NEXT_PUBLIC_API_URL = "https://your-backend.railway.app"
+# NEXT_PUBLIC_SKIP_AUTH = "false"
+
+[env.preview]
+# 預覽環境
+# NEXT_PUBLIC_API_URL = "https://your-staging-backend.railway.app"
+# NEXT_PUBLIC_SKIP_AUTH = "false"

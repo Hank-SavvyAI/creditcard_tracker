@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug User Data</title>
+</head>
+<body>
+    <h1>Debug User LocalStorage</h1>
+    <button onclick="checkUser()">檢查當前使用者資料</button>
+    <button onclick="clearAuth()">清除登入資料</button>
+    <pre id="output"></pre>
+
+    <script>
+        function checkUser() {
+            const user = localStorage.getItem('user');
+            const token = localStorage.getItem('token');
+
+            const output = document.getElementById('output');
+            output.textContent = '=== LocalStorage 資料 ===\n\n';
+            output.textContent += 'Token: ' + (token ? 'exists' : 'not found') + '\n\n';
+            output.textContent += 'User data:\n';
+            output.textContent += user || 'not found';
+
+            if (user) {
+                output.textContent += '\n\n=== Parsed User ===\n';
+                output.textContent += JSON.stringify(JSON.parse(user), null, 2);
+            }
+        }
+
+        function clearAuth() {
+            localStorage.removeItem('user');
+            localStorage.removeItem('token');
+            alert('已清除登入資料，請重新登入');
+            document.getElementById('output').textContent = '已清除！';
+        }
+
+        // 自動執行
+        checkUser();
+    </script>
+</body>
+</html>

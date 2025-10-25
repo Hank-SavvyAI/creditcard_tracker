@@ -1,0 +1,201 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            Int             @id @default(autoincrement())
+  telegramId    String?         @unique
+  googleId      String?         @unique
+  email         String?         @unique
+  username      String?
+  firstName     String?
+  lastName      String?
+  avatar        String?
+  language      String          @default("zh-TW")
+  tier          String          @default("FREE")
+  role          String          @default("USER")
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  cards         UserCard[]
+  benefits      UserBenefit[]
+  benefitHistory UserBenefitHistory[]
+  friends       Friendship[]    @relation("UserFriends")
+  friendOf      Friendship[]    @relation("FriendOfUser")
+  pushSubscriptions PushSubscription[]
+}
+
+model PushSubscription {
+  id            Int             @id @default(autoincrement())
+  userId        Int
+  endpoint      String
+  p256dh        String          // 公鑰
+  auth          String          // 認證密鑰
+  userAgent     String?         // 瀏覽器資訊
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, endpoint])
+}
+
+model CreditCard {
+  id            Int             @id @default(autoincrement())
+  name          String
+  nameEn        String?
+  bank          String
+  bankEn        String?
+  issuer        String?
+  region        String          @default("taiwan")
+  description   String?
+  descriptionEn String?
+  photo         String?
+  isActive      Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  benefits      Benefit[]
+  userCards     UserCard[]
+}
+
+model Benefit {
+  id            Int             @id @default(autoincrement())
+  cardId        Int
+  category      String
+  categoryEn    String?
+  title         String
+  titleEn       String?
+  description   String
+  descriptionEn String?
+  amount        Float?
+  currency      String          @default("TWD")
+  frequency     String          @default("YEARLY")
+  cycleType     String?         // "MONTHLY" | "QUARTERLY" | "YEARLY" | null (一次性)
+  startMonth    Int?
+  startDay      Int?
+  endMonth      Int?
+  endDay        Int?
+  reminderDays  Int             @default(30)
+  notifiable    Boolean         @default(true)
+  isActive      Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  card          CreditCard      @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  userBenefits  UserBenefit[]
+  benefitHistory UserBenefitHistory[]
+}
+
+model UserCard {
+  id            Int             @id @default(autoincrement())
+  userId        Int
+  cardId        Int
+  nickname      String?
+  addedAt       DateTime        @default(now())
+
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  card          CreditCard      @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, cardId])
+}
+
+model UserBenefit {
+  id                Int             @id @default(autoincrement())
+  userId            Int
+  benefitId         Int
+  year              Int
+  cycleNumber       Int?            // 1-12(月), 1-4(季), 1(年), null(一次性)
+  periodEnd         DateTime?       // 週期結束時間，用於判斷是否需要歸檔
+  isCompleted       Boolean         @default(false)
+  completedAt       DateTime?
+  notes             String?
+  reminderDays      Int?            // 自訂提醒天數，null 表示使用 Benefit 的預設值
+  notificationEnabled Boolean       @default(true) // 是否啟用通知
+  usedAmount        Float?          @default(0)    // 已使用金額
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  benefit       Benefit         @relation(fields: [benefitId], references: [id], onDelete: Cascade)
+  usages        BenefitUsage[]
+
+  @@unique([userId, benefitId, year, cycleNumber])
+}
+
+model BenefitUsage {
+  id            Int             @id @default(autoincrement())
+  userBenefitId Int
+  amount        Float           // 本次使用/報銷金額
+  usedAt        DateTime        // 使用日期
+  note          String?         // 使用備註
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  userBenefit   UserBenefit     @relation(fields: [userBenefitId], references: [id], onDelete: Cascade)
+}
+
+// 歷史記錄表 - 用於保存已歸檔的福利記錄
+model UserBenefitHistory {
+  id                Int             @id @default(autoincrement())
+  userId            Int
+  benefitId         Int
+  year              Int
+  cycleNumber       Int?
+  periodEnd         DateTime?
+  isCompleted       Boolean
+  completedAt       DateTime?
+  notes             String?
+  reminderDays      Int?
+  notificationEnabled Boolean
+  usedAmount        Float?
+  archivedAt        DateTime        @default(now())  // 歸檔時間
+  createdAt         DateTime        // 原始創建時間
+  updatedAt         DateTime        // 原始更新時間
+
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  benefit       Benefit         @relation(fields: [benefitId], references: [id], onDelete: Cascade)
+  usages        BenefitUsageHistory[]
+
+  @@index([userId, benefitId, year, cycleNumber])
+}
+
+// 歷史使用記錄表
+model BenefitUsageHistory {
+  id            Int             @id @default(autoincrement())
+  historyId     Int             // 對應 UserBenefitHistory 的 id
+  amount        Float
+  usedAt        DateTime
+  note          String?
+  archivedAt    DateTime        @default(now())
+  createdAt     DateTime
+  updatedAt     DateTime
+
+  history       UserBenefitHistory @relation(fields: [historyId], references: [id], onDelete: Cascade)
+}
+
+model Friendship {
+  id            Int             @id @default(autoincrement())
+  userId        Int
+  friendId      Int
+  status        String          @default("PENDING")
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  user          User            @relation("UserFriends", fields: [userId], references: [id], onDelete: Cascade)
+  friend        User            @relation("FriendOfUser", fields: [friendId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, friendId])
+}
+
+// SQLite doesn't support enums, use String with constants instead
+// UserTier: "FREE" | "PREMIUM" | "VIP"
+// UserRole: "USER" | "ADMIN"
+// Frequency: "MONTHLY" | "QUARTERLY" | "YEARLY" | "ONE_TIME"
+// FriendStatus: "PENDING" | "ACCEPTED" | "REJECTED"
+// Region: "taiwan" | "america" | "canada" | "japan" | "singapore" | "other"
