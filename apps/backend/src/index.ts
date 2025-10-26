@@ -28,6 +28,9 @@ app.use(cors({
     'http://poioit.tplinkdns.com:9000',
     'http://poioit.tplinkdns.com',
     'https://benefits.savvyaihelper.com',
+    'https://cards.savvyaihelper.com',
+    'https://caaf6e32.creditcard-tracker.pages.dev',
+    'https://creditcard-tracker.pages.dev',
     process.env.FRONTEND_URL
   ].filter(Boolean) as string[],
   credentials: true

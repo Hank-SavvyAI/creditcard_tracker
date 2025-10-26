@@ -55,6 +55,9 @@ function AuthCallbackContent() {
 
         console.log('Login successful, user data:', userData)
 
+        // Trigger auth change event for Header to update
+        window.dispatchEvent(new Event('auth-change'))
+
         setStatus('success')
         setMessage('登入成功！正在跳轉...')
 

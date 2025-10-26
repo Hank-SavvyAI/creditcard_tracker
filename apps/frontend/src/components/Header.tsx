@@ -15,26 +15,36 @@ export default function Header() {
 
   useEffect(() => {
     // Check if user is logged in
-    const storedUser = localStorage.getItem('user')
-    const storedToken = localStorage.getItem('token')
-    if (storedUser && storedToken) {
-      setUser(JSON.parse(storedUser))
-    }
-    setIsMounted(true)
-
-    // Listen for storage changes (login/logout from other tabs)
-    const handleStorageChange = () => {
-      const updatedUser = localStorage.getItem('user')
-      const updatedToken = localStorage.getItem('token')
-      if (updatedUser && updatedToken) {
-        setUser(JSON.parse(updatedUser))
+    const checkLoginStatus = () => {
+      const storedUser = localStorage.getItem('user')
+      const storedToken = localStorage.getItem('token')
+      if (storedUser && storedToken) {
+        setUser(JSON.parse(storedUser))
       } else {
         setUser(null)
       }
     }
 
+    checkLoginStatus()
+    setIsMounted(true)
+
+    // Listen for storage changes (login/logout from other tabs)
+    const handleStorageChange = () => {
+      checkLoginStatus()
+    }
+
+    // Listen for custom auth change events (same tab)
+    const handleAuthChange = () => {
+      checkLoginStatus()
+    }
+
     window.addEventListener('storage', handleStorageChange)
-    return () => window.removeEventListener('storage', handleStorageChange)
+    window.addEventListener('auth-change', handleAuthChange)
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('auth-change', handleAuthChange)
+    }
   }, [])
 
   const handleLogout = () => {
@@ -42,6 +52,8 @@ export default function Header() {
     localStorage.removeItem('user')
     setUser(null)
     setShowDropdown(false)
+    // Trigger auth change event
+    window.dispatchEvent(new Event('auth-change'))
     router.push('/')
   }
 

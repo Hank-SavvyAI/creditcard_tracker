@@ -13,6 +13,21 @@ export default function CardsPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [selectedRegion, setSelectedRegion] = useState<string>('')
   const [trackingCard, setTrackingCard] = useState<number | null>(null)
+  const [searchKeyword, setSearchKeyword] = useState<string>('')
+  const [selectedBank, setSelectedBank] = useState<string>('')
+  const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set())
+
+  const toggleCardExpand = (cardId: number) => {
+    setExpandedCards(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(cardId)) {
+        newSet.delete(cardId)
+      } else {
+        newSet.add(cardId)
+      }
+      return newSet
+    })
+  }
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -82,8 +97,32 @@ export default function CardsPage() {
     }
   }
 
+  // 獲取所有銀行列表（從當前地區的卡片中）
+  const banksInRegion = selectedRegion
+    ? Array.from(new Set(cards.filter(card => card.region === selectedRegion).map(card => card.bank)))
+    : []
+
+  // 過濾邏輯：地區 + 關鍵字 + 銀行
   const filteredCards = selectedRegion
-    ? cards.filter(card => card.region === selectedRegion)
+    ? cards.filter(card => {
+        // 先過濾地區
+        if (card.region !== selectedRegion) return false
+
+        // 過濾銀行
+        if (selectedBank && card.bank !== selectedBank) return false
+
+        // 過濾關鍵字（搜尋卡片名稱、銀行名稱、描述）
+        if (searchKeyword) {
+          const keyword = searchKeyword.toLowerCase()
+          const matchName = (language === 'zh-TW' ? card.name : card.nameEn || card.name).toLowerCase().includes(keyword)
+          const matchBank = (language === 'zh-TW' ? card.bank : card.bankEn || card.bank).toLowerCase().includes(keyword)
+          const matchDesc = card.description ? (language === 'zh-TW' ? card.description : card.descriptionEn || card.description).toLowerCase().includes(keyword) : false
+
+          return matchName || matchBank || matchDesc
+        }
+
+        return true
+      })
     : cards
 
   if (loading) {
@@ -138,7 +177,11 @@ export default function CardsPage() {
         <>
           <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <button
-              onClick={() => setSelectedRegion('')}
+              onClick={() => {
+                setSelectedRegion('')
+                setSearchKeyword('')
+                setSelectedBank('')
+              }}
               className="btn btn-secondary"
             >
               ← {language === 'zh-TW' ? '返回地區選擇' : 'Back to Regions'}
@@ -148,86 +191,276 @@ export default function CardsPage() {
             </h2>
           </div>
 
+          {/* 搜尋和篩選區 */}
+          <div style={{
+            marginBottom: '2rem',
+            padding: '1.5rem',
+            backgroundColor: 'var(--card-bg)',
+            borderRadius: '12px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+          }}>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+              gap: '1rem'
+            }}>
+              {/* 關鍵字搜尋 */}
+              <div>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '0.5rem',
+                  fontWeight: '600',
+                  color: 'var(--text-color)'
+                }}>
+                  🔍 {language === 'zh-TW' ? '關鍵字搜尋' : 'Search'}
+                </label>
+                <input
+                  type="text"
+                  value={searchKeyword}
+                  onChange={(e) => setSearchKeyword(e.target.value)}
+                  placeholder={language === 'zh-TW' ? '搜尋卡片名稱、銀行或描述...' : 'Search card name, bank or description...'}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border-color)',
+                    fontSize: '1rem'
+                  }}
+                />
+              </div>
+
+              {/* 銀行篩選 */}
+              <div>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '0.5rem',
+                  fontWeight: '600',
+                  color: 'var(--text-color)'
+                }}>
+                  🏦 {language === 'zh-TW' ? '選擇銀行' : 'Select Bank'}
+                </label>
+                <select
+                  value={selectedBank}
+                  onChange={(e) => setSelectedBank(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border-color)',
+                    fontSize: '1rem',
+                    backgroundColor: 'var(--card-bg)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="">{language === 'zh-TW' ? '全部銀行' : 'All Banks'}</option>
+                  {banksInRegion.sort().map(bank => (
+                    <option key={bank} value={bank}>{bank}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 清除篩選按鈕 */}
+              {(searchKeyword || selectedBank) && (
+                <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                  <button
+                    onClick={() => {
+                      setSearchKeyword('')
+                      setSelectedBank('')
+                    }}
+                    className="btn btn-secondary"
+                    style={{ width: '100%' }}
+                  >
+                    🗑️ {language === 'zh-TW' ? '清除篩選' : 'Clear Filters'}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* 篩選結果提示 */}
+            {(searchKeyword || selectedBank) && (
+              <div style={{ marginTop: '1rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                {language === 'zh-TW' ? '找到' : 'Found'} <strong>{filteredCards.length}</strong> {language === 'zh-TW' ? '張信用卡' : 'card(s)'}
+                {searchKeyword && ` ${language === 'zh-TW' ? '包含' : 'containing'} "${searchKeyword}"`}
+                {selectedBank && ` ${language === 'zh-TW' ? '來自' : 'from'} ${selectedBank}`}
+              </div>
+            )}
+          </div>
+
           {filteredCards.length === 0 ? (
             <p>{language === 'zh-TW' ? '此地區目前尚無信用卡資料' : 'No credit cards available in this region'}</p>
           ) : (
             <div className="card-grid">
-              {filteredCards.map((card) => (
-            <div key={card.id} className="card">
-              {card.photo && (
-                <div style={{ marginBottom: '1rem', textAlign: 'center' }}>
-                  <img
-                    src={card.photo}
-                    alt={language === 'zh-TW' ? card.name : (card.nameEn || card.name)}
-                    style={{
-                      maxWidth: '100%',
-                      height: 'auto',
-                      borderRadius: '8px',
-                      maxHeight: '200px',
-                      objectFit: 'contain'
-                    }}
-                  />
-                </div>
-              )}
-              <h2 className="card-title">
-                {language === 'zh-TW' ? card.name : (card.nameEn || card.name)}
-              </h2>
-              <p className="card-bank">
-                🏦 {language === 'zh-TW' ? card.bank : (card.bankEn || card.bank)}
-              </p>
+              {filteredCards.map((card) => {
+                const isExpanded = expandedCards.has(card.id)
+                return (
+                  <div key={card.id} className="card">
+                    {/* 卡片圖片 */}
+                    {card.photo && (
+                      <div style={{ marginBottom: '1rem', textAlign: 'center' }}>
+                        <img
+                          src={card.photo}
+                          alt={language === 'zh-TW' ? card.name : (card.nameEn || card.name)}
+                          style={{
+                            maxWidth: '100%',
+                            height: 'auto',
+                            borderRadius: '8px',
+                            maxHeight: '200px',
+                            objectFit: 'contain'
+                          }}
+                        />
+                      </div>
+                    )}
 
-              {card.description && (
-                <p className="card-description">
-                  {language === 'zh-TW' ? card.description : (card.descriptionEn || card.description)}
-                </p>
-              )}
+                    {/* 卡片名稱 */}
+                    <h2 className="card-title">
+                      {language === 'zh-TW' ? card.name : (card.nameEn || card.name)}
+                    </h2>
 
-              {card.benefits && card.benefits.length > 0 && (
-                <div className="benefits-section">
-                  <h3>{language === 'zh-TW' ? '福利項目：' : 'Benefits:'}</h3>
-                  {card.benefits.map((benefit: any) => (
-                    <div key={benefit.id} className="benefit-item">
-                      <div className="benefit-info">
-                        <div className="benefit-title">
-                          {language === 'zh-TW' ? benefit.title : (benefit.titleEn || benefit.title)}
-                        </div>
-                        <div className="benefit-description">
-                          {language === 'zh-TW' ? benefit.description : (benefit.descriptionEn || benefit.description)}
-                        </div>
-                        {benefit.amount && (
-                          <div className="benefit-amount">
-                            💰 {benefit.currency} {benefit.amount}
+                    {/* 銀行名稱 */}
+                    <p className="card-bank">
+                      🏦 {language === 'zh-TW' ? card.bank : (card.bankEn || card.bank)}
+                    </p>
+
+                    {/* 福利數量提示 */}
+                    {card.benefits && card.benefits.length > 0 && (
+                      <p style={{
+                        color: 'var(--primary-color)',
+                        fontSize: '0.9rem',
+                        marginBottom: '1rem',
+                        fontWeight: '500'
+                      }}>
+                        💎 {card.benefits.length} {language === 'zh-TW' ? '項福利' : 'Benefits'}
+                      </p>
+                    )}
+
+                    {/* 追蹤按鈕 */}
+                    <button
+                      onClick={() => trackCard(card.id)}
+                      disabled={trackingCard === card.id}
+                      className="btn btn-primary"
+                      style={{
+                        width: '100%',
+                        marginBottom: '0.75rem',
+                        opacity: trackingCard === card.id ? 0.5 : 1,
+                        cursor: trackingCard === card.id ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      {trackingCard === card.id
+                        ? (language === 'zh-TW' ? '追蹤中...' : 'Tracking...')
+                        : isLoggedIn
+                        ? (language === 'zh-TW' ? '追蹤此卡' : 'Track This Card')
+                        : (language === 'zh-TW' ? '登入以追蹤此卡' : 'Login to Track This Card')}
+                    </button>
+
+                    {/* 查看詳情按鈕 */}
+                    <button
+                      onClick={() => toggleCardExpand(card.id)}
+                      className="btn btn-secondary"
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.5rem'
+                      }}
+                    >
+                      {isExpanded
+                        ? (language === 'zh-TW' ? '收起詳情' : 'Hide Details')
+                        : (language === 'zh-TW' ? '查看詳情' : 'View Details')}
+                      <span style={{
+                        transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                        transition: 'transform 0.3s ease'
+                      }}>
+                        ▼
+                      </span>
+                    </button>
+
+                    {/* 展開的詳細資訊 */}
+                    {isExpanded && (
+                      <div style={{
+                        marginTop: '1rem',
+                        paddingTop: '1rem',
+                        borderTop: '1px solid var(--border-color)',
+                        animation: 'fadeIn 0.3s ease'
+                      }}>
+                        {/* 卡片描述 */}
+                        {card.description && (
+                          <div style={{ marginBottom: '1.5rem' }}>
+                            <h3 style={{
+                              fontSize: '1rem',
+                              marginBottom: '0.5rem',
+                              color: 'var(--text-color)'
+                            }}>
+                              📝 {language === 'zh-TW' ? '卡片說明' : 'Description'}
+                            </h3>
+                            <p className="card-description">
+                              {language === 'zh-TW' ? card.description : (card.descriptionEn || card.description)}
+                            </p>
                           </div>
                         )}
-                        <div className="benefit-frequency">
-                          📅 {language === 'zh-TW' ? '頻率' : 'Frequency'}: {benefit.frequency}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
 
-              <div className="login-prompt">
-                <button
-                  onClick={() => trackCard(card.id)}
-                  disabled={trackingCard === card.id}
-                  className="btn btn-primary"
-                  style={{
-                    width: '100%',
-                    opacity: trackingCard === card.id ? 0.5 : 1,
-                    cursor: trackingCard === card.id ? 'not-allowed' : 'pointer',
-                  }}
-                >
-                  {trackingCard === card.id
-                    ? (language === 'zh-TW' ? '追蹤中...' : 'Tracking...')
-                    : isLoggedIn
-                    ? (language === 'zh-TW' ? '追蹤此卡' : 'Track This Card')
-                    : (language === 'zh-TW' ? '登入以追蹤此卡' : 'Login to Track This Card')}
-                </button>
-              </div>
-            </div>
-              ))}
+                        {/* 福利列表 */}
+                        {card.benefits && card.benefits.length > 0 && (
+                          <div className="benefits-section">
+                            <h3 style={{
+                              fontSize: '1rem',
+                              marginBottom: '1rem',
+                              color: 'var(--text-color)'
+                            }}>
+                              🎁 {language === 'zh-TW' ? '福利項目' : 'Benefits'}
+                            </h3>
+                            {card.benefits.map((benefit: any) => (
+                              <div
+                                key={benefit.id}
+                                className="benefit-item"
+                                style={{
+                                  marginBottom: '1rem',
+                                  padding: '1rem',
+                                  backgroundColor: 'var(--background)',
+                                  borderRadius: '8px',
+                                  border: '1px solid var(--border-color)'
+                                }}
+                              >
+                                <div className="benefit-info">
+                                  <div className="benefit-title" style={{
+                                    fontWeight: '600',
+                                    marginBottom: '0.5rem',
+                                    color: 'var(--primary-color)'
+                                  }}>
+                                    {language === 'zh-TW' ? benefit.title : (benefit.titleEn || benefit.title)}
+                                  </div>
+                                  <div className="benefit-description" style={{
+                                    fontSize: '0.9rem',
+                                    color: 'var(--text-secondary)',
+                                    marginBottom: '0.5rem'
+                                  }}>
+                                    {language === 'zh-TW' ? benefit.description : (benefit.descriptionEn || benefit.description)}
+                                  </div>
+                                  {benefit.amount && (
+                                    <div className="benefit-amount" style={{
+                                      fontWeight: '600',
+                                      color: '#10b981',
+                                      marginBottom: '0.25rem'
+                                    }}>
+                                      💰 {benefit.currency} {benefit.amount}
+                                    </div>
+                                  )}
+                                  <div className="benefit-frequency" style={{
+                                    fontSize: '0.85rem',
+                                    color: 'var(--text-secondary)'
+                                  }}>
+                                    📅 {language === 'zh-TW' ? '頻率' : 'Frequency'}: {benefit.frequency}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           )}
         </>
