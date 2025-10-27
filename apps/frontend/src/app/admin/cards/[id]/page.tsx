@@ -24,7 +24,7 @@ export default function EditCardPage() {
     region: 'taiwan',
     description: '',
     descriptionEn: '',
-    imageUrl: '',
+    photo: '',
     isActive: true,
   })
 
@@ -47,7 +47,7 @@ export default function EditCardPage() {
           region: foundCard.region || 'taiwan',
           description: foundCard.description || '',
           descriptionEn: foundCard.descriptionEn || '',
-          imageUrl: foundCard.imageUrl || '',
+          photo: foundCard.photo || '',
           isActive: foundCard.isActive,
         })
       }
@@ -217,10 +217,29 @@ export default function EditCardPage() {
               <label>卡片圖片 URL</label>
               <input
                 type="url"
-                name="imageUrl"
-                value={formData.imageUrl}
+                name="photo"
+                value={formData.photo}
                 onChange={handleChange}
+                placeholder="例如：/images/cards/card-name.png"
               />
+              {formData.photo && (
+                <div style={{ marginTop: '0.5rem' }}>
+                  <img
+                    src={formData.photo}
+                    alt="卡片預覽"
+                    style={{
+                      maxWidth: '200px',
+                      height: 'auto',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '8px',
+                      padding: '0.5rem'
+                    }}
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none'
+                    }}
+                  />
+                </div>
+              )}
             </div>
 
             <div className="form-group checkbox-group">
