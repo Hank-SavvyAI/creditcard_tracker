@@ -114,7 +114,7 @@ export default function EditBenefitPage() {
       alert('更新成功！')
       router.push(`/admin/cards/${cardId}`)
     } catch (error) {
-      alert('更新失敗: ' + (error as Error).message)
+      alert('benefits 更新失敗: ' + (error as Error).message)
       console.error(error)
     } finally {
       setSaving(false)
@@ -256,6 +256,7 @@ export default function EditBenefitPage() {
               >
                 <option value="MONTHLY">每月</option>
                 <option value="QUARTERLY">每季</option>
+                <option value="SEMI_ANNUALLY">每半年</option>
                 <option value="YEARLY">每年</option>
                 <option value="ONE_TIME">一次性</option>
               </select>

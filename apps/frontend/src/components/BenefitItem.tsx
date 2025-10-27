@@ -619,7 +619,7 @@ export default function BenefitItem({ benefit, language, year, onToggle, onUpdat
               <div style={{ display: 'grid', gap: '1rem' }}>
                 {history.map((record: any) => {
                   const cycleLabel = record.cycleNumber
-                    ? `${record.year} - ${record.cycleType === 'MONTHLY' ? `${record.cycleNumber}月` : record.cycleType === 'QUARTERLY' ? `Q${record.cycleNumber}` : '全年'}`
+                    ? `${record.year} - ${record.cycleType === 'MONTHLY' ? `${record.cycleNumber}月` : record.cycleType === 'QUARTERLY' ? `Q${record.cycleNumber}` : record.cycleType === 'SEMI_ANNUALLY' ? `${record.cycleNumber === 1 ? '上半年' : '下半年'}` : '全年'}`
                     : record.year;
 
                   return (

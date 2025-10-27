@@ -205,6 +205,7 @@ export default function NewBenefitPage() {
               >
                 <option value="MONTHLY">每月</option>
                 <option value="QUARTERLY">每季</option>
+                <option value="SEMI_ANNUALLY">每半年</option>
                 <option value="YEARLY">每年</option>
                 <option value="ONE_TIME">一次性</option>
               </select>

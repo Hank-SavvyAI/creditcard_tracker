@@ -35,6 +35,13 @@ export function calculatePeriodEnd(
       const quarterEnd = new Date(currentYear, quarterEndMonth, 0)
       return quarterEnd
 
+    case 'SEMI_ANNUALLY':
+      // 當前半年的最後一天 (上半年:6/30, 下半年:12/31)
+      const halfYear = currentMonth <= 6 ? 1 : 2
+      const halfYearEndMonth = halfYear === 1 ? 6 : 12
+      const halfYearEnd = new Date(currentYear, halfYearEndMonth, 0)
+      return halfYearEnd
+
     case 'YEARLY':
       // 使用 benefit 定義的結束月日，或預設12/31
       const yearEndMonth = endMonth || 12
@@ -88,12 +95,14 @@ export function getCycleLabel(
     'zh-TW': {
       MONTHLY: '每月',
       QUARTERLY: '每季',
+      SEMI_ANNUALLY: '每半年',
       YEARLY: '每年',
       ONCE: '一次性',
     },
     en: {
       MONTHLY: 'Monthly',
       QUARTERLY: 'Quarterly',
+      SEMI_ANNUALLY: 'Semi-Annually',
       YEARLY: 'Yearly',
       ONCE: 'One-time',
     },
@@ -137,6 +146,10 @@ export function getCurrentCycleLabel(
     case 'QUARTERLY':
       const quarter = getQuarter(month)
       return language === 'zh-TW' ? `本季 (Q${quarter})` : `This Quarter (Q${quarter})`
+
+    case 'SEMI_ANNUALLY':
+      const halfYear = month <= 6 ? 1 : 2
+      return language === 'zh-TW' ? `${halfYear === 1 ? '上' : '下'}半年` : `${halfYear === 1 ? 'First' : 'Second'} Half`
 
     case 'YEARLY':
       return language === 'zh-TW' ? '本年度' : 'This Year'
