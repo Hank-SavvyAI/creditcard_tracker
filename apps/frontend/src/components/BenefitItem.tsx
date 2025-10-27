@@ -406,6 +406,77 @@ export default function BenefitItem({ benefit, language, year, onToggle, onUpdat
         </div>
       </div>
 
+      {/* Usage History - Table View */}
+      {totalAmount > 0 && usages.length > 0 && (
+        <div style={{
+          marginTop: '1rem',
+          padding: '1rem',
+          background: '#f8f9fa',
+          borderRadius: '8px',
+          border: '1px solid #e0e0e0'
+        }}>
+          <h4 style={{ margin: 0, marginBottom: '0.75rem', fontSize: '0.9rem', fontWeight: '600', color: '#333' }}>
+            📋 {language === 'zh-TW' ? '報銷記錄' : 'Usage History'}
+          </h4>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{
+              width: '100%',
+              borderCollapse: 'collapse',
+              fontSize: '0.85rem'
+            }}>
+              <thead>
+                <tr style={{ background: '#e5e7eb' }}>
+                  <th style={{ padding: '0.5rem', textAlign: 'left', fontWeight: '600', borderBottom: '2px solid #d1d5db' }}>
+                    {language === 'zh-TW' ? '日期' : 'Date'}
+                  </th>
+                  <th style={{ padding: '0.5rem', textAlign: 'right', fontWeight: '600', borderBottom: '2px solid #d1d5db' }}>
+                    {language === 'zh-TW' ? '金額' : 'Amount'}
+                  </th>
+                  <th style={{ padding: '0.5rem', textAlign: 'left', fontWeight: '600', borderBottom: '2px solid #d1d5db' }}>
+                    {language === 'zh-TW' ? '備註' : 'Note'}
+                  </th>
+                  <th style={{ padding: '0.5rem', textAlign: 'center', fontWeight: '600', borderBottom: '2px solid #d1d5db', width: '80px' }}>
+                    {language === 'zh-TW' ? '操作' : 'Action'}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {usages.map((usage) => (
+                  <tr key={usage.id} style={{ background: 'white', borderBottom: '1px solid #e5e7eb' }}>
+                    <td style={{ padding: '0.6rem', fontSize: '0.8rem', color: '#666' }}>
+                      {new Date(usage.usedAt).toLocaleDateString()}
+                    </td>
+                    <td style={{ padding: '0.6rem', textAlign: 'right', fontWeight: '600', color: '#059669' }}>
+                      {benefit.currency} {usage.amount.toFixed(2)}
+                    </td>
+                    <td style={{ padding: '0.6rem', fontSize: '0.8rem', color: '#666' }}>
+                      {usage.note || '-'}
+                    </td>
+                    <td style={{ padding: '0.6rem', textAlign: 'center' }}>
+                      <button
+                        onClick={() => handleDeleteUsage(usage.id)}
+                        style={{
+                          padding: '0.25rem 0.5rem',
+                          fontSize: '0.7rem',
+                          background: '#fee',
+                          color: '#c00',
+                          border: '1px solid #fcc',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {language === 'zh-TW' ? '刪除' : 'Delete'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* Usage Form */}
       {totalAmount > 0 && showUsageForm && (
         <div style={{
@@ -502,77 +573,6 @@ export default function BenefitItem({ benefit, language, year, onToggle, onUpdat
             >
               {language === 'zh-TW' ? '✓ 新增' : '✓ Add'}
             </button>
-          </div>
-        </div>
-      )}
-
-      {/* Usage History - Table View */}
-      {totalAmount > 0 && usages.length > 0 && (
-        <div style={{
-          marginTop: '1rem',
-          padding: '1rem',
-          background: '#f8f9fa',
-          borderRadius: '8px',
-          border: '1px solid #e0e0e0'
-        }}>
-          <h4 style={{ margin: 0, marginBottom: '0.75rem', fontSize: '0.9rem', fontWeight: '600', color: '#333' }}>
-            📋 {language === 'zh-TW' ? '報銷記錄' : 'Usage History'}
-          </h4>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{
-              width: '100%',
-              borderCollapse: 'collapse',
-              fontSize: '0.85rem'
-            }}>
-              <thead>
-                <tr style={{ background: '#e5e7eb' }}>
-                  <th style={{ padding: '0.5rem', textAlign: 'left', fontWeight: '600', borderBottom: '2px solid #d1d5db' }}>
-                    {language === 'zh-TW' ? '日期' : 'Date'}
-                  </th>
-                  <th style={{ padding: '0.5rem', textAlign: 'right', fontWeight: '600', borderBottom: '2px solid #d1d5db' }}>
-                    {language === 'zh-TW' ? '金額' : 'Amount'}
-                  </th>
-                  <th style={{ padding: '0.5rem', textAlign: 'left', fontWeight: '600', borderBottom: '2px solid #d1d5db' }}>
-                    {language === 'zh-TW' ? '備註' : 'Note'}
-                  </th>
-                  <th style={{ padding: '0.5rem', textAlign: 'center', fontWeight: '600', borderBottom: '2px solid #d1d5db', width: '80px' }}>
-                    {language === 'zh-TW' ? '操作' : 'Action'}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {usages.map((usage) => (
-                  <tr key={usage.id} style={{ background: 'white', borderBottom: '1px solid #e5e7eb' }}>
-                    <td style={{ padding: '0.6rem', fontSize: '0.8rem', color: '#666' }}>
-                      {new Date(usage.usedAt).toLocaleDateString()}
-                    </td>
-                    <td style={{ padding: '0.6rem', textAlign: 'right', fontWeight: '600', color: '#059669' }}>
-                      {benefit.currency} {usage.amount.toFixed(2)}
-                    </td>
-                    <td style={{ padding: '0.6rem', fontSize: '0.8rem', color: '#666' }}>
-                      {usage.note || '-'}
-                    </td>
-                    <td style={{ padding: '0.6rem', textAlign: 'center' }}>
-                      <button
-                        onClick={() => handleDeleteUsage(usage.id)}
-                        style={{
-                          padding: '0.25rem 0.5rem',
-                          fontSize: '0.7rem',
-                          background: '#fee',
-                          color: '#c00',
-                          border: '1px solid #fcc',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          whiteSpace: 'nowrap'
-                        }}
-                      >
-                        {language === 'zh-TW' ? '刪除' : 'Delete'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
         </div>
       )}

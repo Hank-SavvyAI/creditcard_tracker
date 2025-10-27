@@ -20,6 +20,13 @@ interface Benefit {
   cycleType: string | null
 }
 
+interface BenefitUsage {
+  id: number
+  amount: number
+  usedAt: string
+  note: string | null
+}
+
 interface UserBenefit {
   id: number
   benefitId: number
@@ -28,6 +35,7 @@ interface UserBenefit {
   periodEnd: string | null
   isCompleted: boolean
   usedAmount: number
+  usages?: BenefitUsage[]
   benefit: Benefit & { card: Card }
 }
 
@@ -57,6 +65,9 @@ export default function SpreadsheetView() {
       oneTime: '一次性',
       loading: '載入中...',
       noData: '尚無資料',
+      usageDate: '消費日期',
+      usageAmount: '消費金額',
+      usageNote: '備註',
     },
     en: {
       title: '📊 Credit Card Benefits Overview',
@@ -78,6 +89,9 @@ export default function SpreadsheetView() {
       oneTime: 'One-time',
       loading: 'Loading...',
       noData: 'No data available',
+      usageDate: 'Usage Date',
+      usageAmount: 'Usage Amount',
+      usageNote: 'Note',
     },
   }
 
@@ -98,11 +112,30 @@ export default function SpreadsheetView() {
         const data = await response.json()
         // Flatten the data structure to get all benefits
         const allBenefits: UserBenefit[] = []
-        data.forEach((userCard: any) => {
-          userCard.card.benefits.forEach((benefit: any) => {
+
+        for (const userCard of data) {
+          for (const benefit of userCard.card.benefits) {
             // Only show benefits that have userBenefit records
             if (benefit.userBenefits && benefit.userBenefits.length > 0) {
               const userBenefit = benefit.userBenefits[0]
+
+              // Load usages for this benefit
+              let usages: BenefitUsage[] = []
+              if (benefit.amount && benefit.amount > 0) {
+                try {
+                  const usageResponse = await fetch(
+                    `${process.env.NEXT_PUBLIC_API_URL}/api/benefits/${benefit.id}/usage?year=${year}`,
+                    { headers: { Authorization: `Bearer ${token}` } }
+                  )
+                  if (usageResponse.ok) {
+                    const usageData = await usageResponse.json()
+                    usages = usageData.usages || []
+                  }
+                } catch (err) {
+                  console.error('Failed to load usages for benefit:', benefit.id, err)
+                }
+              }
+
               allBenefits.push({
                 id: userBenefit.id,
                 benefitId: benefit.id,
@@ -111,6 +144,7 @@ export default function SpreadsheetView() {
                 periodEnd: userBenefit.periodEnd,
                 isCompleted: userBenefit.isCompleted,
                 usedAmount: userBenefit.usedAmount || 0,
+                usages,
                 benefit: {
                   id: benefit.id,
                   name: language === 'zh-TW' ? benefit.title : (benefit.titleEn || benefit.title),
@@ -129,8 +163,8 @@ export default function SpreadsheetView() {
                 } as any,
               })
             }
-          })
-        })
+          }
+        }
         setData(allBenefits)
       }
     } catch (error) {
@@ -218,17 +252,22 @@ export default function SpreadsheetView() {
                     backgroundColor: globalIndex % 2 === 0 ? 'white' : '#f8f9fa',
                   }
 
+                  // Calculate rowSpan for card info (benefit rows + usage rows)
+                  const totalCardRows = benefits.reduce((sum, b) => {
+                    return sum + 1 + (b.usages?.length || 0)
+                  }, 0)
+
                   rows.push(
-                    <tr key={item.id} style={{ borderBottom: '1px solid #dee2e6' }}>
+                    <tr key={item.id} style={{ borderBottom: item.usages && item.usages.length > 0 ? 'none' : '1px solid #dee2e6' }}>
                       {benefitIndex === 0 && (
                         <>
-                          <td style={{ ...rowStyle, verticalAlign: 'top', fontWeight: '600' }} rowSpan={benefits.length}>
+                          <td style={{ ...rowStyle, verticalAlign: 'top', fontWeight: '600' }} rowSpan={totalCardRows}>
                             {item.benefit.card.name || '-'}
                           </td>
-                          <td style={{ ...rowStyle, verticalAlign: 'top' }} rowSpan={benefits.length}>
+                          <td style={{ ...rowStyle, verticalAlign: 'top' }} rowSpan={totalCardRows}>
                             {item.benefit.card.issuer || '-'}
                           </td>
-                          <td style={{ ...rowStyle, textAlign: 'right', verticalAlign: 'top' }} rowSpan={benefits.length}>
+                          <td style={{ ...rowStyle, textAlign: 'right', verticalAlign: 'top' }} rowSpan={totalCardRows}>
                             {item.benefit.card.annualFee != null
                               ? `${item.benefit.card.currency || ''} ${item.benefit.card.annualFee.toFixed(2)}`
                               : '-'}
@@ -254,6 +293,36 @@ export default function SpreadsheetView() {
                       </td>
                     </tr>
                   )
+
+                  // Add usage sub-rows
+                  if (item.usages && item.usages.length > 0) {
+                    item.usages.forEach((usage, usageIndex) => {
+                      const isLastUsage = usageIndex === item.usages!.length - 1
+                      const usageRowStyle = {
+                        ...bodyCellStyle,
+                        backgroundColor: globalIndex % 2 === 0 ? '#f8f9fa' : 'white',
+                        fontSize: '0.85rem',
+                        color: '#6c757d',
+                        paddingLeft: '2rem',
+                      }
+
+                      rows.push(
+                        <tr key={`${item.id}-usage-${usage.id}`} style={{ borderBottom: isLastUsage ? '1px solid #dee2e6' : '1px solid #e9ecef' }}>
+                          <td style={usageRowStyle} colSpan={1}>
+                            └─ {new Date(usage.usedAt).toLocaleDateString()}
+                          </td>
+                          <td style={{ ...usageRowStyle, textAlign: 'right' }} colSpan={1}>
+                            {item.benefit.currency} {usage.amount.toFixed(2)}
+                          </td>
+                          <td style={usageRowStyle} colSpan={1}>
+                            {usage.note || '-'}
+                          </td>
+                          <td style={usageRowStyle} colSpan={4}></td>
+                        </tr>
+                      )
+                    })
+                  }
+
                   globalIndex++
                 })
               })
