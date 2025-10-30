@@ -16,6 +16,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
   const [viewMode, setViewMode] = useState<'card' | 'spreadsheet'>('card')
+  const [isInitialized, setIsInitialized] = useState(false)
   const year = new Date().getFullYear()
 
   useEffect(() => {
@@ -32,6 +33,7 @@ export default function Dashboard() {
       setIsAdmin(user.role === 'ADMIN')
     }
 
+    setIsInitialized(true)
     loadData()
   }, [router])
 
@@ -91,10 +93,15 @@ export default function Dashboard() {
   function handleLogout() {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
-    router.push('/')
+    // Trigger auth change event for Header to update
+    window.dispatchEvent(new Event('auth-change'))
+    // Small delay to allow event to propagate
+    setTimeout(() => {
+      router.push('/')
+    }, 100)
   }
 
-  if (loading) {
+  if (!isInitialized || loading) {
     return <div className="loading">{language === 'zh-TW' ? '載入中...' : 'Loading...'}</div>
   }
 
