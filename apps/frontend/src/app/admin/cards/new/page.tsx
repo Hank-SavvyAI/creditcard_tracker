@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { api } from '@/lib/api'
@@ -20,6 +20,16 @@ export default function NewCardPage() {
     photo: '',
     isActive: true,
   })
+
+  useEffect(() => {
+    const skipAuth = process.env.NEXT_PUBLIC_SKIP_AUTH === 'true'
+    const token = localStorage.getItem('token')
+
+    if (!skipAuth && !token) {
+      router.push('/')
+      return
+    }
+  }, [router])
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
     const { name, value, type } = e.target
@@ -164,7 +174,6 @@ export default function NewCardPage() {
             <div className="form-group">
               <label>卡片圖片 URL</label>
               <input
-                type="url"
                 name="photo"
                 value={formData.photo}
                 onChange={handleChange}

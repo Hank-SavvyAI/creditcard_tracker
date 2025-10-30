@@ -1,12 +1,12 @@
-import { Router } from 'express';
+import { Router, RequestHandler } from 'express';
 import { prisma } from '../lib/prisma';
-import { authenticate, isAdmin, AuthRequest, requireAuth } from '../middleware/auth';
+import { authenticate, isAdmin, AuthRequest } from '../middleware/auth';
 import { manualCheckExpiringBenefits, manualArchiveExpiredBenefits } from '../services/scheduledTasks';
 
 const router = Router();
 
 // All admin routes require authentication and admin role
-router.use(authenticate, isAdmin);
+router.use(authenticate as RequestHandler, isAdmin as RequestHandler);
 
 // Create new credit card
 router.post('/cards', async (req: AuthRequest, res) => {
@@ -134,13 +134,13 @@ router.get('/users', async (req: AuthRequest, res) => {
         lastName: true,
         email: true,
         telegramId: true,
-        isAdmin: true,
+        role: true,
         language: true,
         createdAt: true,
         _count: {
           select: {
-            userCards: true,
-            userBenefits: true,
+            cards: true,
+            benefits: true,
             pushSubscriptions: true,
           }
         }
@@ -152,6 +152,46 @@ router.get('/users', async (req: AuthRequest, res) => {
     res.json(users);
   } catch (error: any) {
     console.error('Error fetching users:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get specific user's tracked credit cards (admin only)
+router.get('/users/:userId/cards', async (req: AuthRequest, res) => {
+  try {
+    const userId = parseInt(req.params.userId);
+
+    const userCards = await prisma.userCard.findMany({
+      where: {
+        userId: userId
+      },
+      include: {
+        card: {
+          include: {
+            benefits: true
+          }
+        }
+      },
+      orderBy: {
+        addedAt: 'desc'
+      }
+    });
+
+    // Transform to match the expected format
+    const cards = userCards.map(uc => ({
+      id: uc.card.id,
+      name: uc.card.name,
+      nameEn: uc.card.nameEn,
+      bank: uc.card.bank,
+      bankEn: uc.card.bankEn,
+      region: uc.card.region,
+      benefitCount: uc.card.benefits.length,
+      addedAt: uc.addedAt
+    }));
+
+    res.json(cards);
+  } catch (error: any) {
+    console.error('Error fetching user cards:', error);
     res.status(500).json({ error: error.message });
   }
 });

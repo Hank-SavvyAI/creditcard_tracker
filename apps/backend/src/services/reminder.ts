@@ -78,10 +78,13 @@ async function checkAndSendReminders() {
             ? `⏰ 提醒：${cardName} 的「${benefitTitle}」將於 ${daysUntilDeadline} 天後到期！`
             : `⏰ Reminder: "${benefitTitle}" for ${cardName} expires in ${daysUntilDeadline} days!`;
 
-          try {
-            await bot.telegram.sendMessage(user.telegramId, message);
-          } catch (error) {
-            console.error(`Failed to send reminder to user ${user.telegramId}:`, error);
+          // Only send Telegram messages to users with Telegram IDs
+          if (user.telegramId) {
+            try {
+              await bot.telegram.sendMessage(user.telegramId, message);
+            } catch (error) {
+              console.error(`Failed to send reminder to user ${user.telegramId}:`, error);
+            }
           }
         }
       }

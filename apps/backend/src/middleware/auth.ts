@@ -5,13 +5,19 @@ import { prisma } from '../lib/prisma';
 export interface AuthRequest extends Request {
   user?: {
     id: number;
-    telegramId: string;
+    telegramId: string | null;
     tier: string;
     role: string;
   };
 }
 
 export const authenticate = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  // Debug logging
+  console.log('🔍 Auth Debug:');
+  console.log('  - Headers:', JSON.stringify(req.headers, null, 2));
+  console.log('  - Authorization:', req.headers.authorization);
+  console.log('  - SKIP_AUTH:', process.env.SKIP_AUTH);
+
   // Skip authentication in development if SKIP_AUTH is true
   if (process.env.SKIP_AUTH === 'true') {
     req.user = {
@@ -28,6 +34,17 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
 
     if (!token) {
       return res.status(401).json({ error: 'No token provided' });
+    }
+
+    // Check if this is a dev token
+    if (process.env.DEV_TOKEN && token === process.env.DEV_TOKEN) {
+      req.user = {
+        id: 1,
+        telegramId: 'dev_bypass',
+        tier: 'VIP',
+        role: 'ADMIN',
+      };
+      return next();
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {

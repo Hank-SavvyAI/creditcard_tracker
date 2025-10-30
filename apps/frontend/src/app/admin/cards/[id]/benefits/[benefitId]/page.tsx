@@ -36,8 +36,16 @@ export default function EditBenefitPage() {
   })
 
   useEffect(() => {
+    const skipAuth = process.env.NEXT_PUBLIC_SKIP_AUTH === 'true'
+    const token = localStorage.getItem('token')
+
+    if (!skipAuth && !token) {
+      router.push('/')
+      return
+    }
+
     loadBenefit()
-  }, [benefitId])
+  }, [router, benefitId])
 
   async function loadBenefit() {
     try {

@@ -29,8 +29,16 @@ export default function EditCardPage() {
   })
 
   useEffect(() => {
+    const skipAuth = process.env.NEXT_PUBLIC_SKIP_AUTH === 'true'
+    const token = localStorage.getItem('token')
+
+    if (!skipAuth && !token) {
+      router.push('/')
+      return
+    }
+
     loadCard()
-  }, [cardId])
+  }, [router, cardId])
 
   async function loadCard() {
     try {
@@ -216,7 +224,6 @@ export default function EditCardPage() {
             <div className="form-group">
               <label>卡片圖片 URL</label>
               <input
-                type="url"
                 name="photo"
                 value={formData.photo}
                 onChange={handleChange}

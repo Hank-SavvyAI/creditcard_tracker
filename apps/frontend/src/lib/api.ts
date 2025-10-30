@@ -8,7 +8,12 @@ export class ApiClient {
   }
 
   private async request(endpoint: string, options: RequestInit = {}) {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    let token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+
+    // If no token exists and we have a dev token, use it
+    if (!token && process.env.NEXT_PUBLIC_DEV_TOKEN) {
+      token = process.env.NEXT_PUBLIC_DEV_TOKEN;
+    }
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',

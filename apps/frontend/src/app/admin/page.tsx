@@ -75,6 +75,9 @@ export default function AdminPage() {
           <Link href="/dashboard" className="btn btn-secondary">
             返回儀表板
           </Link>
+          <Link href="/admin/users" className="btn btn-secondary">
+            👥 用戶管理
+          </Link>
           <button onClick={handleLogout} className="btn btn-secondary">
             登出
           </button>

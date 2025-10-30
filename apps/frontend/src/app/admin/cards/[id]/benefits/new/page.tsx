@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { api } from '@/lib/api'
@@ -31,6 +31,16 @@ export default function NewBenefitPage() {
     notifiable: true,
     isActive: true,
   })
+
+  useEffect(() => {
+    const skipAuth = process.env.NEXT_PUBLIC_SKIP_AUTH === 'true'
+    const token = localStorage.getItem('token')
+
+    if (!skipAuth && !token) {
+      router.push('/')
+      return
+    }
+  }, [router])
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
     const { name, value, type } = e.target
