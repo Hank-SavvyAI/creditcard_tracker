@@ -18,6 +18,7 @@ export default function NewCardPage() {
     description: '',
     descriptionEn: '',
     photo: '',
+    fee: '',
     isActive: true,
   })
 
@@ -144,6 +145,17 @@ export default function NewCardPage() {
                 <option value="other">🌏 其他 Other</option>
               </select>
             </div>
+
+            <div className="form-group">
+              <label>年費</label>
+              <input
+                type="text"
+                name="fee"
+                value={formData.fee}
+                onChange={handleChange}
+                placeholder="例如：NT$ 3,000 / 首年免年費 / 免年費"
+              />
+            </div>
           </div>
 
           <div className="form-section">
@@ -174,6 +186,7 @@ export default function NewCardPage() {
             <div className="form-group">
               <label>卡片圖片 URL</label>
               <input
+                type="text"
                 name="photo"
                 value={formData.photo}
                 onChange={handleChange}

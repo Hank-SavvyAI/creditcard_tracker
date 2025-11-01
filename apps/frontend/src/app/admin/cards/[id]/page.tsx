@@ -25,6 +25,7 @@ export default function EditCardPage() {
     description: '',
     descriptionEn: '',
     photo: '',
+    fee: '',
     isActive: true,
   })
 
@@ -56,6 +57,7 @@ export default function EditCardPage() {
           description: foundCard.description || '',
           descriptionEn: foundCard.descriptionEn || '',
           photo: foundCard.photo || '',
+          fee: foundCard.fee || '',
           isActive: foundCard.isActive,
         })
       }
@@ -196,6 +198,17 @@ export default function EditCardPage() {
                 <option value="other">🌏 其他 Other</option>
               </select>
             </div>
+
+            <div className="form-group">
+              <label>年費</label>
+              <input
+                type="text"
+                name="fee"
+                value={formData.fee}
+                onChange={handleChange}
+                placeholder="例如：NT$ 3,000 / 首年免年費 / 免年費"
+              />
+            </div>
           </div>
 
           <div className="form-section">
@@ -224,6 +237,7 @@ export default function EditCardPage() {
             <div className="form-group">
               <label>卡片圖片 URL</label>
               <input
+                type="text"
                 name="photo"
                 value={formData.photo}
                 onChange={handleChange}

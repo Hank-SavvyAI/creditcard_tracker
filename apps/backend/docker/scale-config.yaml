@@ -1,0 +1,11 @@
+properties:
+  template:
+    scale:
+      minReplicas: 0
+      maxReplicas: 5
+      cooldownPeriod: 120  # 2 分鐘
+      rules:
+        - name: http-scale
+          http:
+            metadata:
+              concurrentRequests: "100"

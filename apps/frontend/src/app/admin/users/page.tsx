@@ -155,18 +155,17 @@ export default function AdminUsersPage() {
       maxWidth: '1400px',
       margin: '0 auto',
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      backgroundAttachment: 'fixed'
+      background: '#f5f7fa'
     }}>
       <div style={{
         marginBottom: '2rem',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        background: 'rgba(255, 255, 255, 0.95)',
+        background: 'white',
         padding: '1.5rem',
         borderRadius: '1rem',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)'
       }}>
         <h1 style={{
           fontSize: '2rem',
@@ -292,10 +291,10 @@ export default function AdminUsersPage() {
         display: 'flex',
         gap: '1rem',
         flexWrap: 'wrap',
-        background: 'rgba(255, 255, 255, 0.95)',
+        background: 'white',
         padding: '1.5rem',
         borderRadius: '1rem',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)'
       }}>
         <input
           type="text"
@@ -344,11 +343,11 @@ export default function AdminUsersPage() {
 
       {/* 使用者列表 */}
       <div style={{
-        background: 'rgba(255, 255, 255, 0.95)',
+        background: 'white',
         borderRadius: '1rem',
         border: 'none',
         overflow: 'hidden',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)'
       }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
@@ -498,13 +497,13 @@ export default function AdminUsersPage() {
       <div style={{
         marginTop: '1rem',
         fontSize: '0.875rem',
-        color: 'white',
-        background: 'rgba(255, 255, 255, 0.2)',
+        color: '#666',
+        background: 'white',
         padding: '1rem',
         borderRadius: '0.75rem',
         textAlign: 'center',
         fontWeight: '500',
-        backdropFilter: 'blur(10px)'
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)'
       }}>
         顯示 {filteredUsers.length} / {users.length} 位使用者
       </div>
