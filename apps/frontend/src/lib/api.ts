@@ -52,6 +52,11 @@ export class ApiClient {
     return this.request('/api/cards');
   }
 
+  async getBanks(language?: string) {
+    const query = language ? `?language=${language}` : '';
+    return this.request(`/api/cards/banks${query}`);
+  }
+
   async getMyCards() {
     return this.request('/api/cards/my');
   }
@@ -147,6 +152,14 @@ export class ApiClient {
   async deleteBenefit(benefitId: number) {
     return this.request(`/api/admin/benefits/${benefitId}`, {
       method: 'DELETE',
+    });
+  }
+
+  // Feedback
+  async submitFeedback(data: { name: string; email: string; message: string }) {
+    return this.request('/api/feedback', {
+      method: 'POST',
+      body: JSON.stringify(data),
     });
   }
 }

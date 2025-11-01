@@ -8,10 +8,14 @@ import { api } from '@/lib/api'
 export default function AdminPage() {
   const router = useRouter()
   const [cards, setCards] = useState<any[]>([])
+  const [banks, setBanks] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [searchRegion, setSearchRegion] = useState('')
   const [searchBank, setSearchBank] = useState('')
+  const [searchType, setSearchType] = useState('')
+  const [sortBy, setSortBy] = useState<'name' | 'bank' | 'id'>('id')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
 
   useEffect(() => {
     const skipAuth = process.env.NEXT_PUBLIC_SKIP_AUTH === 'true'
@@ -26,8 +30,12 @@ export default function AdminPage() {
 
   async function loadCards() {
     try {
-      const data = await api.getCards()
-      setCards(data)
+      const [cardsData, banksData] = await Promise.all([
+        api.getCards(),
+        api.getBanks()
+      ])
+      setCards(cardsData)
+      setBanks(banksData)
     } catch (err) {
       setError('載入失敗')
       console.error(err)
@@ -56,12 +64,39 @@ export default function AdminPage() {
     router.push('/')
   }
 
-  // 過濾卡片
-  const filteredCards = cards.filter((card) => {
-    const regionMatch = !searchRegion || card.region === searchRegion
-    const bankMatch = !searchBank || card.bank.toLowerCase().includes(searchBank.toLowerCase())
-    return regionMatch && bankMatch
-  })
+  // 過濾和排序卡片
+  const filteredCards = cards
+    .filter((card) => {
+      const regionMatch = !searchRegion || card.region === searchRegion
+      const bankMatch = !searchBank || card.bank === searchBank
+      const typeMatch = !searchType || card.type === searchType
+      return regionMatch && bankMatch && typeMatch
+    })
+    .sort((a, b) => {
+      let compareValue = 0
+
+      if (sortBy === 'name') {
+        compareValue = a.name.localeCompare(b.name)
+      } else if (sortBy === 'bank') {
+        compareValue = a.bank.localeCompare(b.bank)
+      } else {
+        // sortBy === 'id'
+        compareValue = a.id - b.id
+      }
+
+      return sortOrder === 'asc' ? compareValue : -compareValue
+    })
+
+  function handleSort(field: 'name' | 'bank' | 'id') {
+    if (sortBy === field) {
+      // 如果已經在排序這個欄位，切換順序
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+    } else {
+      // 切換到新欄位，預設升序
+      setSortBy(field)
+      setSortOrder('asc')
+    }
+  }
 
   if (loading) {
     return <div className="loading">載入中...</div>
@@ -102,28 +137,48 @@ export default function AdminPage() {
             style={{ width: '100%' }}
           >
             <option value="">全部地區</option>
-            <option value="taiwan">🇹🇼 台灣</option>
             <option value="america">🇺🇸 美國</option>
+            {/*
+            <option value="taiwan">🇹🇼 台灣</option>
             <option value="canada">🇨🇦 加拿大</option>
             <option value="japan">🇯🇵 日本</option>
             <option value="singapore">🇸🇬 新加坡</option>
             <option value="other">🌏 其他</option>
+            */}
           </select>
         </div>
 
         <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-          <label>銀行搜尋</label>
-          <input
-            type="text"
+          <label>銀行篩選</label>
+          <select
             value={searchBank}
             onChange={(e) => setSearchBank(e.target.value)}
-            placeholder="輸入銀行名稱..."
             style={{ width: '100%' }}
-          />
+          >
+            <option value="">全部銀行</option>
+            {banks.map((bank) => (
+              <option key={bank.value} value={bank.value}>
+                {bank.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+          <label>類型篩選</label>
+          <select
+            value={searchType}
+            onChange={(e) => setSearchType(e.target.value)}
+            style={{ width: '100%' }}
+          >
+            <option value="">全部類型</option>
+            <option value="personal">💳 個人卡</option>
+            <option value="business">🏢 商業卡</option>
+          </select>
         </div>
 
         <button
-          onClick={() => { setSearchRegion(''); setSearchBank('') }}
+          onClick={() => { setSearchRegion(''); setSearchBank(''); setSearchType('') }}
           className="btn btn-secondary"
           style={{ whiteSpace: 'nowrap' }}
         >
@@ -140,10 +195,26 @@ export default function AdminPage() {
           <table className="admin-table">
             <thead>
               <tr>
-                <th>ID</th>
-                <th>卡片名稱</th>
-                <th>銀行</th>
+                <th
+                  onClick={() => handleSort('id')}
+                  style={{ cursor: 'pointer', userSelect: 'none' }}
+                >
+                  ID {sortBy === 'id' && (sortOrder === 'asc' ? '↑' : '↓')}
+                </th>
+                <th
+                  onClick={() => handleSort('name')}
+                  style={{ cursor: 'pointer', userSelect: 'none' }}
+                >
+                  卡片名稱 {sortBy === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}
+                </th>
+                <th
+                  onClick={() => handleSort('bank')}
+                  style={{ cursor: 'pointer', userSelect: 'none' }}
+                >
+                  銀行 {sortBy === 'bank' && (sortOrder === 'asc' ? '↑' : '↓')}
+                </th>
                 <th>地區</th>
+                <th>類型</th>
                 <th>福利數量</th>
                 <th>狀態</th>
                 <th>操作</th>
@@ -162,6 +233,18 @@ export default function AdminPage() {
                     {card.region === 'japan' && '🇯🇵 日本'}
                     {card.region === 'singapore' && '🇸🇬 新加坡'}
                     {card.region === 'other' && '🌏 其他'}
+                  </td>
+                  <td>
+                    <span style={{
+                      padding: '0.25rem 0.5rem',
+                      borderRadius: '4px',
+                      fontSize: '0.85rem',
+                      fontWeight: '500',
+                      background: card.type === 'business' ? '#dbeafe' : '#fef3c7',
+                      color: card.type === 'business' ? '#1e40af' : '#92400e',
+                    }}>
+                      {card.type === 'business' ? '🏢 商業卡' : '💳 個人卡'}
+                    </span>
                   </td>
                   <td>{card.benefits?.length || 0} 項</td>
                   <td>

@@ -15,6 +15,7 @@ import userRoutes from './routes/users';
 import adminRoutes from './routes/admin';
 import googleAuthRoutes from './routes/googleAuth';
 import pushNotificationRoutes from './routes/pushNotifications';
+import feedbackRoutes from './routes/feedback';
 
 dotenv.config();
 
@@ -57,6 +58,7 @@ app.use('/api/benefits', benefitRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/push', pushNotificationRoutes);
+app.use('/api/feedback', feedbackRoutes);
 
 // Error handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

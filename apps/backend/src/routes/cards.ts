@@ -4,6 +4,51 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
+// Get all unique banks (public, no auth required)
+router.get('/banks', async (req, res) => {
+  try {
+    const language = req.query.language as string || 'zh';
+
+    const cards = await prisma.creditCard.findMany({
+      where: { isActive: true },
+      select: {
+        bank: true,
+        bankEn: true,
+      },
+    });
+
+    // Get unique banks using a Map to deduplicate
+    const uniqueBanksMap = new Map<string, { bank: string; bankEn: string }>();
+    cards.forEach(card => {
+      if (!uniqueBanksMap.has(card.bank)) {
+        uniqueBanksMap.set(card.bank, {
+          bank: card.bank,
+          bankEn: (card.bankEn && card.bankEn.trim()) ? card.bankEn : card.bank,
+        });
+      }
+    });
+
+    // Extract unique banks based on language
+    const banks = Array.from(uniqueBanksMap.values())
+      .map(bank => {
+        const displayName = language === 'en'
+          ? bank.bankEn
+          : bank.bank;
+        return {
+          value: bank.bank, // Always use Chinese bank name as the value for filtering
+          label: displayName,
+          bank: bank.bank,
+          bankEn: bank.bankEn,
+        };
+      })
+      .sort((a, b) => a.label.localeCompare(b.label));
+
+    res.json(banks);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch banks' });
+  }
+});
+
 // Get all available credit cards (public, no auth required)
 router.get('/', async (req, res) => {
   try {

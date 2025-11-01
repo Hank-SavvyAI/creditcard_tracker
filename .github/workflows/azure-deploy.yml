@@ -1,0 +1,65 @@
+name: Deploy to Azure
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/backend/**'
+
+env:
+  AZURE_CONTAINERAPP_NAME: creditcard-backend
+  RESOURCE_GROUP: creditcard-rg
+  CONTAINER_REGISTRY: creditcardregistry
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Log in to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Log in to ACR
+        run: az acr login --name ${{ env.CONTAINER_REGISTRY }}
+
+      - name: Build and push image
+        working-directory: ./apps/backend
+        run: |
+          echo "Building image with commit SHA: ${{ github.sha }}"
+
+          # 建置 Docker 映像檔（指定 AMD64 架構）
+          docker build --platform linux/amd64 \
+            -f docker/Dockerfile \
+            -t ${{ env.CONTAINER_REGISTRY }}.azurecr.io/creditcard-backend:${{ github.sha }} \
+            -t ${{ env.CONTAINER_REGISTRY }}.azurecr.io/creditcard-backend:latest \
+            .
+
+          # 推送兩個標籤到 ACR
+          echo "Pushing images to ACR..."
+          docker push ${{ env.CONTAINER_REGISTRY }}.azurecr.io/creditcard-backend:${{ github.sha }}
+          docker push ${{ env.CONTAINER_REGISTRY }}.azurecr.io/creditcard-backend:latest
+
+          echo "Images pushed successfully!"
+
+      - name: Deploy to Container App
+        run: |
+          echo "Deploying to Azure Container App with version ${{ github.sha }}..."
+
+          az containerapp update \
+            --name ${{ env.AZURE_CONTAINERAPP_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --image ${{ env.CONTAINER_REGISTRY }}.azurecr.io/creditcard-backend:${{ github.sha }}
+
+          echo "Deployment completed!"
+
+      - name: Show deployment info
+        run: |
+          echo "Listing active revisions..."
+          az containerapp revision list \
+            --name ${{ env.AZURE_CONTAINERAPP_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --query "[?properties.active==\`true\`].{Name:name, Created:properties.createdTime, Traffic:properties.trafficWeight}" \
+            --output table

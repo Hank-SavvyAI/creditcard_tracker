@@ -22,6 +22,7 @@ export default function EditCardPage() {
     bankEn: '',
     issuer: '',
     region: 'taiwan',
+    type: 'personal',
     description: '',
     descriptionEn: '',
     photo: '',
@@ -54,6 +55,7 @@ export default function EditCardPage() {
           bankEn: foundCard.bankEn || '',
           issuer: foundCard.issuer || '',
           region: foundCard.region || 'taiwan',
+          type: foundCard.type || 'personal',
           description: foundCard.description || '',
           descriptionEn: foundCard.descriptionEn || '',
           photo: foundCard.photo || '',
@@ -190,12 +192,27 @@ export default function EditCardPage() {
                 onChange={handleChange}
                 required
               >
-                <option value="taiwan">🇹🇼 台灣 Taiwan</option>
                 <option value="america">🇺🇸 美國 America</option>
+                {/*
+                <option value="taiwan">🇹🇼 台灣 Taiwan</option>
                 <option value="canada">🇨🇦 加拿大 Canada</option>
                 <option value="japan">🇯🇵 日本 Japan</option>
                 <option value="singapore">🇸🇬 新加坡 Singapore</option>
                 <option value="other">🌏 其他 Other</option>
+                */}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>卡片類型 *</label>
+              <select
+                name="type"
+                value={formData.type}
+                onChange={handleChange}
+                required
+              >
+                <option value="personal">💳 個人卡 Personal Card</option>
+                <option value="business">🏢 商業卡 Business Card</option>
               </select>
             </div>
 
@@ -299,17 +316,17 @@ export default function EditCardPage() {
             <table className="admin-table" style={{ marginTop: '1rem' }}>
               <thead>
                 <tr>
-                  <th>福利名稱</th>
-                  <th>金額</th>
-                  <th>頻率</th>
-                  <th>狀態</th>
-                  <th>操作</th>
+                  <th style={{ width: '30%' }}>福利名稱</th>
+                  <th style={{ width: '15%' }}>金額</th>
+                  <th style={{ width: '15%' }}>頻率</th>
+                  <th style={{ width: '12%' }}>狀態</th>
+                  <th style={{ width: '28%' }}>操作</th>
                 </tr>
               </thead>
               <tbody>
                 {card.benefits.map((benefit: any) => (
                   <tr key={benefit.id}>
-                    <td>{benefit.title}</td>
+                    <td style={{ wordWrap: 'break-word', whiteSpace: 'normal' }}>{benefit.title}</td>
                     <td>
                       {benefit.amount ? `${benefit.currency} ${benefit.amount}` : '-'}
                     </td>

@@ -15,6 +15,7 @@ export default function NewCardPage() {
     bankEn: '',
     issuer: '',
     region: 'taiwan',
+    type: 'personal',
     description: '',
     descriptionEn: '',
     photo: '',
@@ -137,12 +138,27 @@ export default function NewCardPage() {
                 onChange={handleChange}
                 required
               >
-                <option value="taiwan">🇹🇼 台灣 Taiwan</option>
                 <option value="america">🇺🇸 美國 America</option>
+                {/*
+                <option value="taiwan">🇹🇼 台灣 Taiwan</option>
                 <option value="canada">🇨🇦 加拿大 Canada</option>
                 <option value="japan">🇯🇵 日本 Japan</option>
                 <option value="singapore">🇸🇬 新加坡 Singapore</option>
                 <option value="other">🌏 其他 Other</option>
+                */}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>卡片類型 *</label>
+              <select
+                name="type"
+                value={formData.type}
+                onChange={handleChange}
+                required
+              >
+                <option value="personal">💳 個人卡 Personal Card</option>
+                <option value="business">🏢 商業卡 Business Card</option>
               </select>
             </div>
 
