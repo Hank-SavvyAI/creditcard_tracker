@@ -13,6 +13,8 @@ interface User {
   lastName: string | null
   email: string | null
   telegramId: string | null
+  googleId: string | null
+  lineId: string | null
   role: string
   language: string
   createdAt: string
@@ -273,7 +275,7 @@ export default function AdminUsersPage() {
         }}>
           <div style={{ fontSize: '0.875rem', opacity: 0.9, fontWeight: '500' }}>Google 用戶</div>
           <div style={{ fontSize: '2.5rem', fontWeight: 'bold', marginTop: '0.5rem' }}>
-            {users.filter(u => u.email).length}
+            {users.filter(u => u.googleId).length}
           </div>
           <div style={{
             position: 'absolute',
@@ -282,6 +284,28 @@ export default function AdminUsersPage() {
             fontSize: '6rem',
             opacity: 0.1
           }}>🔍</div>
+        </div>
+        <div style={{
+          padding: '2rem',
+          background: 'linear-gradient(135deg, #00B900 0%, #00D900 100%)',
+          borderRadius: '1rem',
+          border: 'none',
+          boxShadow: '0 8px 32px rgba(0, 185, 0, 0.3)',
+          color: 'white',
+          position: 'relative',
+          overflow: 'hidden'
+        }}>
+          <div style={{ fontSize: '0.875rem', opacity: 0.9, fontWeight: '500' }}>LINE 用戶</div>
+          <div style={{ fontSize: '2.5rem', fontWeight: 'bold', marginTop: '0.5rem' }}>
+            {users.filter(u => u.lineId).length}
+          </div>
+          <div style={{
+            position: 'absolute',
+            right: '-20px',
+            bottom: '-20px',
+            fontSize: '6rem',
+            opacity: 0.1
+          }}>💚</div>
         </div>
       </div>
 
@@ -405,17 +429,31 @@ export default function AdminUsersPage() {
                       ✈️ Telegram
                     </span>
                   )}
-                  {user.email && (
+                  {user.googleId && (
                     <span style={{
                       padding: '0.4rem 0.8rem',
                       background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
                       color: 'white',
                       borderRadius: '0.5rem',
                       fontSize: '0.875rem',
+                      marginRight: '0.5rem',
                       fontWeight: '500',
                       display: 'inline-block'
                     }}>
                       🔍 Google
+                    </span>
+                  )}
+                  {user.lineId && (
+                    <span style={{
+                      padding: '0.4rem 0.8rem',
+                      background: 'linear-gradient(135deg, #00B900 0%, #00D900 100%)',
+                      color: 'white',
+                      borderRadius: '0.5rem',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      display: 'inline-block'
+                    }}>
+                      💚 LINE
                     </span>
                   )}
                 </td>
@@ -424,24 +462,24 @@ export default function AdminUsersPage() {
                   <button
                     onClick={() => handleCardCountClick(user)}
                     style={{
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      background: 'linear-gradient(135deg, #a8c0ff 0%, #c5d4ff 100%)',
                       border: 'none',
-                      color: 'white',
+                      color: '#4a5568',
                       cursor: 'pointer',
                       fontSize: '0.875rem',
                       padding: '0.4rem 0.8rem',
                       borderRadius: '0.5rem',
                       fontWeight: '600',
                       transition: 'all 0.3s ease',
-                      boxShadow: '0 2px 8px rgba(102, 126, 234, 0.3)'
+                      boxShadow: '0 2px 8px rgba(168, 192, 255, 0.3)'
                     }}
                     onMouseOver={(e) => {
                       e.currentTarget.style.transform = 'translateY(-2px)'
-                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)'
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(168, 192, 255, 0.4)'
                     }}
                     onMouseOut={(e) => {
                       e.currentTarget.style.transform = 'translateY(0)'
-                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(102, 126, 234, 0.3)'
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(168, 192, 255, 0.3)'
                     }}
                   >
                     {user._count.userCards} 張

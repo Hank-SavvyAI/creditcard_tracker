@@ -127,7 +127,7 @@ export default function Home() {
           <h3 style={{ textAlign: 'center', marginBottom: '0.75rem', color: '#333', fontSize: '1.1rem' }}>
             {language === 'zh-TW' ? '🔐 選擇登入方式' : '🔐 Choose Login Method'}
           </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
             {/* Telegram Login Info */}
             <div style={{
               padding: '1rem',
@@ -223,6 +223,55 @@ export default function Home() {
                 onMouseLeave={(e) => e.currentTarget.style.background = '#4285F4'}
               >
                 {language === 'zh-TW' ? '使用 Google 登入' : 'Sign in with Google'}
+              </a>
+            </div>
+
+            {/* LINE Login Info */}
+            <div style={{
+              padding: '1rem',
+              background: 'white',
+              borderRadius: '8px',
+              border: '2px solid #00B900',
+              display: 'flex',
+              flexDirection: 'column',
+            }}>
+              <h4 style={{ margin: '0 0 0.5rem 0', color: '#00B900', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1rem' }}>
+                <span style={{ fontSize: '1.3rem' }}>💚</span>
+                {language === 'zh-TW' ? 'LINE' : 'LINE'}
+              </h4>
+              <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.85rem', lineHeight: '1.5', flex: 1, color: '#666' }}>
+                {language === 'zh-TW' ? (
+                  <>
+                    • 即時訊息提醒<br />
+                    • 使用現有 LINE 帳號<br />
+                    • 快速便捷登入
+                  </>
+                ) : (
+                  <>
+                    • Instant LINE messages<br />
+                    • Use existing LINE account<br />
+                    • Quick & easy login
+                  </>
+                )}
+              </p>
+              <a
+                href={`${process.env.NEXT_PUBLIC_API_URL}/api/auth/line`}
+                style={{
+                  display: 'block',
+                  padding: '0.6rem',
+                  background: '#00B900',
+                  color: 'white',
+                  textAlign: 'center',
+                  borderRadius: '8px',
+                  textDecoration: 'none',
+                  fontWeight: '500',
+                  transition: 'background 0.2s',
+                  fontSize: '0.9rem'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#009900'}
+                onMouseLeave={(e) => e.currentTarget.style.background = '#00B900'}
+              >
+                {language === 'zh-TW' ? '使用 LINE 登入' : 'Sign in with LINE'}
               </a>
             </div>
           </div>

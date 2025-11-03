@@ -134,6 +134,8 @@ router.get('/users', async (req: AuthRequest, res) => {
         lastName: true,
         email: true,
         telegramId: true,
+        googleId: true,
+        lineId: true,
         role: true,
         language: true,
         createdAt: true,
@@ -177,19 +179,24 @@ router.get('/users/:userId/cards', async (req: AuthRequest, res) => {
       }
     });
 
-    // Transform to match the expected format
-    const cards = userCards.map(uc => ({
-      id: uc.card.id,
-      name: uc.card.name,
-      nameEn: uc.card.nameEn,
-      bank: uc.card.bank,
-      bankEn: uc.card.bankEn,
-      region: uc.card.region,
-      benefitCount: uc.card.benefits.length,
+    // Return userCards with card details
+    const formattedCards = userCards.map(uc => ({
+      id: uc.id,
+      card: {
+        id: uc.card.id,
+        name: uc.card.name,
+        nameEn: uc.card.nameEn,
+        bank: uc.card.bank,
+        bankEn: uc.card.bankEn,
+        region: uc.card.region,
+        _count: {
+          benefits: uc.card.benefits.length
+        }
+      },
       addedAt: uc.addedAt
     }));
 
-    res.json(cards);
+    res.json(formattedCards);
   } catch (error: any) {
     console.error('Error fetching user cards:', error);
     res.status(500).json({ error: error.message });

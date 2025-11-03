@@ -15,6 +15,7 @@ export default function CardsPage() {
   const [trackingCard, setTrackingCard] = useState<number | null>(null)
   const [searchKeyword, setSearchKeyword] = useState<string>('')
   const [selectedBank, setSelectedBank] = useState<string>('')
+  const [selectedType, setSelectedType] = useState<string>('')
   const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set())
 
   const toggleCardExpand = (cardId: number) => {
@@ -102,7 +103,7 @@ export default function CardsPage() {
     ? Array.from(new Set(cards.filter(card => card.region === selectedRegion).map(card => card.bank)))
     : []
 
-  // 過濾邏輯：地區 + 關鍵字 + 銀行
+  // 過濾邏輯：地區 + 關鍵字 + 銀行 + 類型
   const filteredCards = selectedRegion
     ? cards.filter(card => {
         // 先過濾地區
@@ -110,6 +111,9 @@ export default function CardsPage() {
 
         // 過濾銀行
         if (selectedBank && card.bank !== selectedBank) return false
+
+        // 過濾卡片類型
+        if (selectedType && card.type !== selectedType) return false
 
         // 過濾關鍵字（搜尋卡片名稱、銀行名稱、描述）
         if (searchKeyword) {
@@ -181,6 +185,7 @@ export default function CardsPage() {
                 setSelectedRegion('')
                 setSearchKeyword('')
                 setSelectedBank('')
+                setSelectedType('')
               }}
               className="btn btn-secondary"
             >
@@ -259,13 +264,43 @@ export default function CardsPage() {
                 </select>
               </div>
 
+              {/* 卡片類型篩選 */}
+              <div>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '0.5rem',
+                  fontWeight: '600',
+                  color: 'var(--text-color)'
+                }}>
+                  💳 {language === 'zh-TW' ? '卡片類型' : 'Card Type'}
+                </label>
+                <select
+                  value={selectedType}
+                  onChange={(e) => setSelectedType(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border-color)',
+                    fontSize: '1rem',
+                    backgroundColor: 'var(--card-bg)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="">{language === 'zh-TW' ? '全部類型' : 'All Types'}</option>
+                  <option value="personal">{language === 'zh-TW' ? '💳 個人卡' : '💳 Personal Card'}</option>
+                  <option value="business">{language === 'zh-TW' ? '🏢 商業卡' : '🏢 Business Card'}</option>
+                </select>
+              </div>
+
               {/* 清除篩選按鈕 */}
-              {(searchKeyword || selectedBank) && (
+              {(searchKeyword || selectedBank || selectedType) && (
                 <div style={{ display: 'flex', alignItems: 'flex-end' }}>
                   <button
                     onClick={() => {
                       setSearchKeyword('')
                       setSelectedBank('')
+                      setSelectedType('')
                     }}
                     className="btn btn-secondary"
                     style={{ width: '100%' }}
@@ -277,11 +312,12 @@ export default function CardsPage() {
             </div>
 
             {/* 篩選結果提示 */}
-            {(searchKeyword || selectedBank) && (
+            {(searchKeyword || selectedBank || selectedType) && (
               <div style={{ marginTop: '1rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
                 {language === 'zh-TW' ? '找到' : 'Found'} <strong>{filteredCards.length}</strong> {language === 'zh-TW' ? '張信用卡' : 'card(s)'}
                 {searchKeyword && ` ${language === 'zh-TW' ? '包含' : 'containing'} "${searchKeyword}"`}
                 {selectedBank && ` ${language === 'zh-TW' ? '來自' : 'from'} ${selectedBank}`}
+                {selectedType && ` ${language === 'zh-TW' ? '類型' : 'type'}: ${selectedType === 'personal' ? (language === 'zh-TW' ? '個人卡' : 'Personal') : (language === 'zh-TW' ? '商業卡' : 'Business')}`}
               </div>
             )}
           </div>
