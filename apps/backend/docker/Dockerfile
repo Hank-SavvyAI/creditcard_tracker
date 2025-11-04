@@ -8,18 +8,21 @@ WORKDIR /app
 # Install OpenSSL 1.1 for Prisma
 RUN apt-get update && apt-get install -y openssl libssl1.1 ca-certificates && rm -rf /var/lib/apt/lists/*
 
-# Copy package files
+# Copy package files first
 COPY package*.json ./
+
+# Copy prisma schema
 COPY prisma ./prisma/
 
 # Install dependencies (using npm install since we don't have package-lock.json in this directory)
 RUN npm install --production=false
 
-# Copy source code
-COPY . .
-
-# Generate Prisma Client
+# Generate Prisma Client BEFORE copying source code
 RUN npx prisma generate
+
+# Now copy source code
+COPY tsconfig.json ./
+COPY src ./src/
 
 # Build TypeScript
 RUN npm run build
