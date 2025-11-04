@@ -16,6 +16,7 @@ import adminRoutes from './routes/admin';
 import googleAuthRoutes from './routes/googleAuth';
 import pushNotificationRoutes from './routes/pushNotifications';
 import feedbackRoutes from './routes/feedback';
+import lineWebhookRoutes from './routes/lineWebhook';
 
 dotenv.config();
 
@@ -36,6 +37,11 @@ app.use(cors({
   ].filter(Boolean) as string[],
   credentials: true
 }));
+
+// LINE webhook needs raw body for signature verification
+app.use('/api/line/webhook', express.raw({ type: 'application/json' }));
+
+// Other routes use JSON parser
 app.use(express.json({ limit: '10mb' }));
 app.use(passport.initialize());
 
@@ -59,6 +65,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/push', pushNotificationRoutes);
 app.use('/api/feedback', feedbackRoutes);
+app.use('/api/line', lineWebhookRoutes);
 
 // Error handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
