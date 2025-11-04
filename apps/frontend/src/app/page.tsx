@@ -20,9 +20,24 @@ export default function Home() {
 
   useEffect(() => {
     // Check if user is authenticated
-    const token = localStorage.getItem('token')
-    setIsLoggedIn(!!token)
+    const checkLoginStatus = () => {
+      const token = localStorage.getItem('token')
+      setIsLoggedIn(!!token)
+    }
+
+    checkLoginStatus()
     setIsMounted(true)
+
+    // Listen for auth changes (login/logout events from Header)
+    const handleAuthChange = () => {
+      checkLoginStatus()
+    }
+
+    window.addEventListener('auth-change', handleAuthChange)
+
+    return () => {
+      window.removeEventListener('auth-change', handleAuthChange)
+    }
   }, [])
 
   async function handleFeedbackSubmit(e: React.FormEvent) {

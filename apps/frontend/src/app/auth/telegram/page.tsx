@@ -70,6 +70,9 @@ export default function TelegramAuthPage() {
       localStorage.setItem('user', JSON.stringify(data.user))
       setUser(data.user)
 
+      // Trigger auth change event for Header to update
+      window.dispatchEvent(new Event('auth-change'))
+
       console.log('Telegram login successful, redirecting...')
       setTimeout(() => {
         router.push('/dashboard')
@@ -159,7 +162,10 @@ export default function TelegramAuthPage() {
                   onClick={() => {
                     localStorage.removeItem('token')
                     localStorage.removeItem('user')
+                    localStorage.removeItem('line_friend_prompted')
                     setUser(null)
+                    // Trigger auth change event
+                    window.dispatchEvent(new Event('auth-change'))
                   }}
                   style={{
                     width: '100%',
