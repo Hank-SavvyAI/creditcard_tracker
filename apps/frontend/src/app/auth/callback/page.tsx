@@ -60,12 +60,8 @@ function AuthCallbackContent() {
         // Trigger auth change event for Header to update
         window.dispatchEvent(new Event('auth-change'))
 
-        // 如果是 LINE 登入且還沒提示過加好友
-        console.log('Checking LINE friend prompt condition:', {
-          lineId: userData.lineId,
-          line_friend_prompted: localStorage.getItem('line_friend_prompted')
-        });
-        const shouldShowPrompt = userData.lineId && !!localStorage.getItem('line_friend_prompted');
+        // 檢查是否需要顯示加入 LINE 好友提示
+        const shouldShowPrompt = userData.lineId && !localStorage.getItem('line_friend_prompted');
 
         if (shouldShowPrompt) {
           setUserData(userData)
