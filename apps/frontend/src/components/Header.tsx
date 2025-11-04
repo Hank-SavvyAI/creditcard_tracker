@@ -50,6 +50,7 @@ export default function Header() {
   const handleLogout = () => {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
+    localStorage.removeItem('line_friend_prompted') // 清除 LINE 好友提示標記
     setUser(null)
     setShowDropdown(false)
     // Trigger auth change event

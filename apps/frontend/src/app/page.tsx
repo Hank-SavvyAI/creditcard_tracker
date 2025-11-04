@@ -242,15 +242,15 @@ export default function Home() {
               <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.85rem', lineHeight: '1.5', flex: 1, color: '#666' }}>
                 {language === 'zh-TW' ? (
                   <>
-                    • 即時訊息提醒<br />
                     • 使用現有 LINE 帳號<br />
-                    • 快速便捷登入
+                    • 快速便捷登入<br />
+                    • 安全可靠
                   </>
                 ) : (
                   <>
-                    • Instant LINE messages<br />
                     • Use existing LINE account<br />
-                    • Quick & easy login
+                    • Quick & easy login<br />
+                    • Safe & secure
                   </>
                 )}
               </p>

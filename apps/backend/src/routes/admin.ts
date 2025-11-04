@@ -2,6 +2,7 @@ import { Router, RequestHandler } from 'express';
 import { prisma } from '../lib/prisma';
 import { authenticate, isAdmin, AuthRequest } from '../middleware/auth';
 import { manualCheckExpiringBenefits, manualArchiveExpiredBenefits } from '../services/scheduledTasks';
+import { sendNotification } from '../services/notificationService';
 
 const router = Router();
 
@@ -119,6 +120,28 @@ router.post('/manual/archive-expired-benefits', async (req: AuthRequest, res) =>
     res.json(result);
   } catch (error: any) {
     console.error('Error in manual archive:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 測試通知功能（僅供測試）
+router.post('/manual/test-notification', async (req: AuthRequest, res) => {
+  try {
+    const { userId, title, body } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'userId is required' });
+    }
+
+    const result = await sendNotification({
+      userId: parseInt(userId),
+      title: title || '測試通知',
+      body: body || '這是一則測試通知訊息'
+    });
+
+    res.json(result);
+  } catch (error: any) {
+    console.error('Error in test notification:', error);
     res.status(500).json({ error: error.message });
   }
 });

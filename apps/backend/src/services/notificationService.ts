@@ -1,6 +1,7 @@
 import { prisma } from '../lib/prisma';
 import webpush from 'web-push';
 import nodemailer from 'nodemailer';
+import axios from 'axios';
 
 // Email transporter setup (使用 Gmail SMTP)
 const emailTransporter = nodemailer.createTransport({
@@ -41,6 +42,7 @@ export async function sendNotification(notificationData: NotificationData) {
 
     const results = {
       telegram: false,
+      line: false,
       email: false,
       webPush: false,
       errors: [] as string[],
@@ -58,7 +60,19 @@ export async function sendNotification(notificationData: NotificationData) {
       }
     }
 
-    // 2. 發送 Email 通知（如果有 email）
+    // 2. 發送 LINE 通知（如果有 lineId 且功能已啟用）
+    if (user.lineId && process.env.LINE_NOTIFY_ENABLED === 'true') {
+      try {
+        await sendLineNotification(user.lineId, title, body);
+        results.line = true;
+        console.log(`✅ LINE notification sent to user ${userId}`);
+      } catch (error: any) {
+        console.error(`❌ LINE notification failed for user ${userId}:`, error.message);
+        results.errors.push(`LINE: ${error.message}`);
+      }
+    }
+
+    // 3. 發送 Email 通知（如果有 email）
     if (user.email) {
       try {
         await sendEmailNotification(user.email, user.firstName || user.username || 'User', title, body);
@@ -86,7 +100,7 @@ export async function sendNotification(notificationData: NotificationData) {
     }
 
     return {
-      success: results.telegram || results.email || results.webPush,
+      success: results.telegram || results.line || results.email || results.webPush,
       results,
     };
   } catch (error) {
@@ -192,6 +206,46 @@ async function sendWebPushNotification(
     failCount,
     error: failCount === subscriptions.length ? 'All push notifications failed' : undefined,
   };
+}
+
+/**
+ * 發送 LINE 通知
+ */
+async function sendLineNotification(lineId: string, title: string, body: string) {
+  // 檢查是否設定了 LINE credentials 和啟用狀態
+  if (!process.env.LINE_CHANNEL_ACCESS_TOKEN) {
+    console.warn('LINE Channel Access Token not configured, skipping LINE notification');
+    return;
+  }
+
+  if (process.env.LINE_NOTIFY_ENABLED !== 'true') {
+    console.log('LINE notifications disabled, skipping');
+    return;
+  }
+
+  const message = {
+    type: 'text',
+    text: `🔔 ${title}\n\n${body}`
+  };
+
+  try {
+    await axios.post(
+      'https://api.line.me/v2/bot/message/push',
+      {
+        to: lineId,
+        messages: [message]
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.LINE_CHANNEL_ACCESS_TOKEN}`
+        }
+      }
+    );
+  } catch (error: any) {
+    console.error('LINE API error:', error.response?.data || error.message);
+    throw new Error(`Failed to send LINE notification: ${error.response?.data?.message || error.message}`);
+  }
 }
 
 /**
