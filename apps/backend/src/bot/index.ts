@@ -82,6 +82,7 @@ bot.command('start', async (ctx) => {
           [i18next.t('commands.mycards', { lng: language })],
           [language === 'zh-TW' ? '📅 7天內到期' : '📅 Due in 7 days'],
           [language === 'zh-TW' ? '📆 當月到期福利' : '📆 This month', language === 'zh-TW' ? '📆 當季到期福利' : '📆 This quarter'],
+          [language === 'zh-TW' ? '📆 當年到期福利' : '📆 This year'],
           [i18next.t('commands.settings', { lng: language })],
         ],
         resize_keyboard: true,
@@ -195,7 +196,7 @@ bot.hears(/我的信用卡|My Cards/, async (ctx) => {
 // Helper function to query benefits expiring within time range
 async function queryExpiringBenefits(
   userId: number,
-  range: '7' | 'month' | 'quarter',
+  range: '7' | 'month' | 'quarter' | 'year',
   language: string
 ) {
   const year = new Date().getFullYear();
@@ -247,6 +248,9 @@ async function queryExpiringBenefits(
     const quarterEndMonth = (quarter + 1) * 3;
     endDate = new Date(now.getFullYear(), quarterEndMonth, 0, 23, 59, 59, 999);
     rangeLabel = language === 'zh-TW' ? '當季到期' : 'This quarter';
+  } else if (range === 'year') {
+    endDate = new Date(now.getFullYear(), 12, 0, 23, 59, 59, 999);
+    rangeLabel = language === 'zh-TW' ? '當年到期' : 'This year';
   } else {
     return {
       message: 'Invalid range',
@@ -277,6 +281,16 @@ async function queryExpiringBenefits(
         year,
         cycleNumber: userBenefit?.cycleNumber,
       });
+
+      // Debug logging for benefit calculation
+      console.log(`🔍 Benefit: ${benefit.title}`);
+      console.log(`  cycleType: ${benefit.cycleType}, isPersonalCycle: ${benefit.isPersonalCycle}`);
+      console.log(`  userBenefit: ${userBenefit ? 'exists' : 'null'}`);
+      console.log(`  customStartDate: ${userBenefit?.customStartDate}, cycleNumber: ${userBenefit?.cycleNumber}`);
+      console.log(`  calculated deadline: ${deadline}`);
+      console.log(`  now: ${now}, endDate: ${endDate}`);
+      console.log(`  deadline >= now: ${deadline && deadline >= now}`);
+      console.log(`  deadline <= endDate: ${deadline && deadline <= endDate}`);
 
       // Check if benefit is within range
       if (deadline && deadline >= now && deadline <= endDate) {
@@ -400,6 +414,36 @@ bot.hears(/📆 當季(到期)?福利|📆 This quarter/, async (ctx) => {
   );
 });
 
+bot.hears(/📆 當年(到期)?福利|📆 This year/, async (ctx) => {
+  const telegramId = ctx.from.id.toString();
+  const language = await getUserLanguage(telegramId);
+
+  const user = await prisma.user.findUnique({
+    where: { telegramId },
+  });
+
+  if (!user) {
+    return ctx.reply('Please start the bot first with /start');
+  }
+
+  const result = await queryExpiringBenefits(user.id, 'year', language);
+
+  const token = await generateLoginToken(user.id, 'TELEGRAM');
+  const backendUrl = process.env.BACKEND_URL || 'https://api.savvyaihelper.com';
+  const autoLoginUrl = `${backendUrl}/api/auth/token?token=${token}`;
+
+  await ctx.reply(
+    result.message,
+    {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: language === 'zh-TW' ? '💻 開啟網站查看詳情' : '💻 Open Website', web_app: { url: autoLoginUrl } }]
+        ]
+      }
+    }
+  );
+});
+
 // Settings command
 bot.hears(/設定|Settings/, async (ctx) => {
   const telegramId = ctx.from.id.toString();
@@ -431,6 +475,7 @@ bot.action(/lang_(.+)/, async (ctx) => {
       [i18next.t('commands.mycards', { lng: language })],
       [language === 'zh-TW' ? '📅 7天內到期' : '📅 Due in 7 days'],
       [language === 'zh-TW' ? '📆 當月到期福利' : '📆 This month', language === 'zh-TW' ? '📆 當季到期福利' : '📆 This quarter'],
+      [language === 'zh-TW' ? '📆 當年到期福利' : '📆 This year'],
       [i18next.t('commands.settings', { lng: language })],
     ]).resize()
   );

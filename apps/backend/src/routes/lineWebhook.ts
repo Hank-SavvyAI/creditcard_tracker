@@ -51,10 +51,18 @@ function verifyLineSignature(body: string, signature: string): boolean {
 
 /**
  * Parse user message to extract time range for benefit query
- * Returns: { type: 'days' | 'month' | 'quarter', value: number }
+ * Returns: { type: 'days' | 'month' | 'quarter' | 'year', value: number }
  */
-function parseTimeRangeFromMessage(message: string): { type: 'days' | 'month' | 'quarter', value: number } {
+function parseTimeRangeFromMessage(message: string): { type: 'days' | 'month' | 'quarter' | 'year', value: number } {
   const lowerMessage = message.toLowerCase();
+
+  // Check for year-based queries
+  if (/當年|本年|今年|這一年/.test(lowerMessage)) {
+    const now = new Date();
+    const endOfYear = new Date(now.getFullYear(), 12, 0, 23, 59, 59, 999);
+    const daysUntilEndOfYear = Math.ceil((endOfYear.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    return { type: 'year', value: daysUntilEndOfYear };
+  }
 
   // Check for month-based queries
   if (/當月|本月|這個月/.test(lowerMessage)) {
@@ -105,12 +113,14 @@ function parseTimeRangeFromMessage(message: string): { type: 'days' | 'month' | 
 /**
  * Format benefit information for LINE message
  */
-function formatBenefitsMessage(benefits: any[], timeRange: { type: 'days' | 'month' | 'quarter', value: number }): string {
+function formatBenefitsMessage(benefits: any[], timeRange: { type: 'days' | 'month' | 'quarter' | 'year', value: number }): string {
   let rangeText: string;
   if (timeRange.type === 'month') {
     rangeText = '當月到期';
   } else if (timeRange.type === 'quarter') {
     rangeText = '當季到期';
+  } else if (timeRange.type === 'year') {
+    rangeText = '當年到期';
   } else {
     rangeText = `${timeRange.value} 天內`;
   }
@@ -332,6 +342,14 @@ router.post('/webhook', async (req, res) => {
                   {
                     type: 'action',
                     action: {
+                      type: 'message',
+                      label: '📆 當年到期',
+                      text: '當年到期的福利'
+                    }
+                  },
+                  {
+                    type: 'action',
+                    action: {
                       type: 'uri',
                       label: '💻 網站',
                       uri: autoLoginUrl
@@ -402,6 +420,16 @@ router.post('/webhook', async (req, res) => {
                 const now = new Date();
                 const futureDate = new Date(now.getTime() + timeRange.value * 24 * 60 * 60 * 1000);
 
+                // Debug logging for benefit calculation
+                console.log(`🔍 LINE Benefit: ${benefit.title}`);
+                console.log(`  cycleType: ${benefit.cycleType}, isPersonalCycle: ${benefit.isPersonalCycle}`);
+                console.log(`  userBenefit: ${userBenefit ? 'exists' : 'null'}`);
+                console.log(`  customStartDate: ${userBenefit?.customStartDate}, cycleNumber: ${userBenefit?.cycleNumber}`);
+                console.log(`  calculated deadline: ${deadline}`);
+                console.log(`  now: ${now}, futureDate: ${futureDate}`);
+                console.log(`  deadline >= now: ${deadline >= now}`);
+                console.log(`  deadline <= futureDate: ${deadline <= futureDate}`);
+
                 if (deadline >= now && deadline <= futureDate) {
                   expiringBenefits.push({
                     ...benefit,
@@ -458,6 +486,14 @@ router.post('/webhook', async (req, res) => {
                       type: 'message',
                       label: '📆 本季到期',
                       text: '本季到期的福利'
+                    }
+                  },
+                  {
+                    type: 'action',
+                    action: {
+                      type: 'message',
+                      label: '📆 當年到期',
+                      text: '當年到期的福利'
                     }
                   },
                   {
@@ -595,6 +631,14 @@ router.post('/webhook', async (req, res) => {
                     type: 'message',
                     label: '📆 本季到期',
                     text: '本季到期的福利'
+                  }
+                },
+                {
+                  type: 'action',
+                  action: {
+                    type: 'message',
+                    label: '📆 當年到期',
+                    text: '當年到期的福利'
                   }
                 },
                 {
