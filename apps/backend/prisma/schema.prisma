@@ -30,6 +30,7 @@ model User {
   friends       Friendship[]    @relation("UserFriends")
   friendOf      Friendship[]    @relation("FriendOfUser")
   pushSubscriptions PushSubscription[]
+  loginTokens   LoginToken[]
 }
 
 model PushSubscription {
@@ -85,6 +86,7 @@ model Benefit {
   startDay      Int?
   endMonth      Int?
   endDay        Int?
+  isPersonalCycle Boolean       @default(false) // 是否依用戶開卡日計算週期
   reminderDays  Int             @default(30)
   notifiable    Boolean         @default(true)
   isActive      Boolean         @default(true)
@@ -116,6 +118,7 @@ model UserBenefit {
   year              Int
   cycleNumber       Int?            // 1-12(月), 1-4(季), 1(年), null(一次性)
   periodEnd         DateTime?       // 週期結束時間，用於判斷是否需要歸檔
+  customStartDate   DateTime?       // 個人化起始日期（用於 isPersonalCycle 的福利）
   isCompleted       Boolean         @default(false)
   completedAt       DateTime?
   notes             String?
@@ -195,6 +198,21 @@ model Friendship {
   friend        User            @relation("FriendOfUser", fields: [friendId], references: [id], onDelete: Cascade)
 
   @@unique([userId, friendId])
+}
+
+model LoginToken {
+  id            Int             @id @default(autoincrement())
+  userId        Int
+  token         String          @unique
+  expiresAt     DateTime
+  used          Boolean         @default(false)
+  source        String          @default("LINE") // "LINE" | "TELEGRAM" | "GOOGLE"
+  createdAt     DateTime        @default(now())
+
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([expiresAt])
 }
 
 // SQLite doesn't support enums, use String with constants instead

@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function LineCallbackPage() {
+function LineCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -29,5 +29,13 @@ export default function LineCallbackPage() {
     <div className="loading">
       自動登入中...
     </div>
+  );
+}
+
+export default function LineCallbackPage() {
+  return (
+    <Suspense fallback={<div className="loading">載入中...</div>}>
+      <LineCallbackContent />
+    </Suspense>
   );
 }
