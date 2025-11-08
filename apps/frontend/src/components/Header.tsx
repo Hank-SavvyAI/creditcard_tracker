@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
+import Link from 'next/link'
 import { useLanguageStore } from '@/store/language'
 import LanguageSwitcher from './LanguageSwitcher'
 
@@ -86,8 +87,8 @@ export default function Header() {
         alignItems: 'center',
       }}>
         {/* Logo / Title */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-          <a href="/" style={{ textDecoration: 'none' }}>
+        <div className="header-left" style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+          <Link href="/" style={{ textDecoration: 'none' }}>
             <h1 style={{
               margin: 0,
               fontSize: '1.5rem',
@@ -96,32 +97,32 @@ export default function Header() {
             }}>
               💳 {language === 'zh-TW' ? '信用卡福利追蹤' : 'Credit Card Tracker'}
             </h1>
-          </a>
+          </Link>
 
           {/* Navigation Links */}
           <nav style={{ display: 'flex', gap: '1.5rem' }}>
-            <a href="/" style={{
+            <Link href="/" style={{
               textDecoration: 'none',
               color: 'var(--foreground)',
               fontWeight: pathname === '/' ? 'bold' : 'normal',
             }}>
               {language === 'zh-TW' ? '首頁' : 'Home'}
-            </a>
-            <a href="/cards" style={{
+            </Link>
+            <Link href="/cards" style={{
               textDecoration: 'none',
               color: 'var(--foreground)',
               fontWeight: pathname === '/cards' ? 'bold' : 'normal',
             }}>
               {language === 'zh-TW' ? '新增信用卡' : 'Add Card'}
-            </a>
+            </Link>
             {isMounted && user && (
-              <a href="/dashboard" style={{
+              <Link href="/dashboard" style={{
                 textDecoration: 'none',
                 color: 'var(--foreground)',
                 fontWeight: pathname === '/dashboard' ? 'bold' : 'normal',
               }}>
                 {language === 'zh-TW' ? '我的卡片' : 'My Cards'}
-              </a>
+              </Link>
             )}
           </nav>
         </div>

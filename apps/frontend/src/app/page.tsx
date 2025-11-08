@@ -70,7 +70,7 @@ export default function Home() {
       <h2>{t('home.title.en', language)}</h2>
 
       {/* 精簡的功能介紹 - 橫向排列 */}
-      <div style={{
+      <div className="features-grid" style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
         gap: '1rem',
@@ -142,7 +142,7 @@ export default function Home() {
           <h3 style={{ textAlign: 'center', marginBottom: '0.75rem', color: '#333', fontSize: '1.1rem' }}>
             {language === 'zh-TW' ? '🔐 選擇登入方式' : '🔐 Choose Login Method'}
           </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+          <div className="login-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
             {/* Telegram Login Info */}
             <div style={{
               padding: '1rem',

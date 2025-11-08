@@ -319,7 +319,7 @@ export default function BenefitItem({ benefit, language, year, onToggle, onUpdat
       )}
 
       {/* Second Row: Benefit Info and Action Buttons */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+      <div className="benefit-row" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
         {isNotifiable && (
           <span className="benefit-status" style={{ fontSize: '1.2rem' }}>
             {completed ? '✅' : '⏳'}
@@ -373,7 +373,7 @@ export default function BenefitItem({ benefit, language, year, onToggle, onUpdat
             </div>
           )}
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+        <div className="benefit-actions" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           {cycleType && (
             <button
               onClick={loadHistory}

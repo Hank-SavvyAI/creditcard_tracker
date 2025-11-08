@@ -12,6 +12,24 @@ function AutoLoginContent() {
     const token = searchParams.get('token');
 
     if (token) {
+      try {
+        // Decode JWT to extract user information
+        const parts = token.split('.');
+        if (parts.length === 3) {
+          const payload = JSON.parse(atob(parts[1]));
+
+          // Save user info to localStorage
+          const user = {
+            id: payload.id,
+            username: payload.username,
+            role: payload.role
+          };
+          localStorage.setItem('user', JSON.stringify(user));
+        }
+      } catch (error) {
+        console.error('Failed to decode JWT:', error);
+      }
+
       // Save token to localStorage
       localStorage.setItem('token', token);
 

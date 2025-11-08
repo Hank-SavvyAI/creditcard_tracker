@@ -809,12 +809,66 @@ body {
   /* Dashboard card - stack vertically on mobile */
   .dashboard-card {
     flex-direction: column !important;
-    align-items: center !important;
+    align-items: stretch !important;
   }
 
   .card-image-container {
     width: 100% !important;
-    max-width: 300px !important;
+    max-width: 100% !important;
+  }
+
+  .dashboard-card > div {
+    width: 100% !important;
+  }
+
+  /* Header - stack navigation on mobile */
+  header > div {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 1rem !important;
+  }
+
+  .header-left {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.75rem !important;
+    width: 100% !important;
+  }
+
+  header nav {
+    flex-direction: column !important;
+    gap: 0.75rem !important;
+    width: 100%;
+  }
+
+  /* Benefit item - stack all sections vertically on mobile */
+  .benefit-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .benefit-info {
+    width: 100% !important;
+  }
+
+  .benefit-actions {
+    flex-direction: column !important;
+    width: 100% !important;
+  }
+
+  .benefit-actions button {
+    width: 100% !important;
+  }
+
+  /* Home page features grid - single column on mobile */
+  .features-grid {
+    grid-template-columns: 1fr !important;
+    max-width: 400px !important;
+  }
+
+  /* Login methods grid - single column on mobile */
+  .login-grid {
+    grid-template-columns: 1fr !important;
   }
 }
 
