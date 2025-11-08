@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma';
 import { i18next, initI18n } from '../lib/i18n';
 import jwt from 'jsonwebtoken';
 import { generateLoginToken } from '../routes/lineAuth';
+import { calculateBenefitDeadline } from '../lib/benefitDeadline';
 
 initI18n();
 
@@ -66,12 +67,38 @@ bot.command('start', async (ctx) => {
   }
 
   // 一般的 /start 指令
+  // Generate auto-login token for website button
+  const token = await generateLoginToken(user.id, 'TELEGRAM');
+  const backendUrl = process.env.BACKEND_URL || 'https://api.savvyaihelper.com';
+  const autoLoginUrl = `${backendUrl}/api/auth/token?token=${token}`;
+
   await ctx.reply(
-    i18next.t('welcome', { lng: language }),
-    Markup.keyboard([
-      [i18next.t('commands.mycards', { lng: language }), i18next.t('commands.benefits', { lng: language })],
-      [i18next.t('commands.addcard', { lng: language }), i18next.t('commands.settings', { lng: language })],
-    ]).resize()
+    language === 'zh-TW'
+      ? '🎉 歡迎使用信用卡福利追蹤系統！\n\n您可以使用下方選單查詢即將到期的福利，或是開啟網站進行完整管理。'
+      : '🎉 Welcome to Credit Card Benefits Tracker!\n\nUse the menu below to check expiring benefits, or open the website for full management.',
+    {
+      reply_markup: {
+        keyboard: [
+          [i18next.t('commands.mycards', { lng: language })],
+          [language === 'zh-TW' ? '📅 7天內到期' : '📅 Due in 7 days'],
+          [language === 'zh-TW' ? '📆 當月到期福利' : '📆 This month', language === 'zh-TW' ? '📆 當季到期福利' : '📆 This quarter'],
+          [i18next.t('commands.settings', { lng: language })],
+        ],
+        resize_keyboard: true,
+      }
+    }
+  );
+
+  // Send website button as separate message
+  await ctx.reply(
+    language === 'zh-TW' ? '💻 點擊下方按鈕開啟網站：' : '💻 Click below to open website:',
+    {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: language === 'zh-TW' ? '💻 開啟網站' : '💻 Open Website', web_app: { url: autoLoginUrl } }]
+        ]
+      }
+    }
   );
 });
 
@@ -91,7 +118,15 @@ bot.hears(/我的信用卡|My Cards/, async (ctx) => {
   const userCards = await prisma.userCard.findMany({
     where: { userId: user.id },
     include: {
-      card: true,
+      card: {
+        include: {
+          benefits: {
+            where: {
+              isActive: true,
+            },
+          },
+        },
+      },
     },
   });
 
@@ -102,10 +137,42 @@ bot.hears(/我的信用卡|My Cards/, async (ctx) => {
   let message = language === 'zh-TW' ? '📇 您的信用卡：\n\n' : '📇 Your Cards:\n\n';
   userCards.forEach((uc, index) => {
     const cardName = language === 'zh-TW' ? uc.card.name : (uc.card.nameEn || uc.card.name);
-    message += `${index + 1}. ${cardName}\n`;
+    const bank = uc.card.bank;
+    message += `${index + 1}. ${bank} - ${cardName}\n`;
     if (uc.nickname) {
       message += `   ${language === 'zh-TW' ? '別名' : 'Nickname'}: ${uc.nickname}\n`;
     }
+
+    // List benefits for this card
+    if (uc.card.benefits.length > 0) {
+      message += `   ${language === 'zh-TW' ? '福利' : 'Benefits'}:\n`;
+      uc.card.benefits.forEach((benefit, idx) => {
+        const benefitTitle = language === 'zh-TW' ? benefit.title : (benefit.titleEn || benefit.title);
+        message += `   ${idx + 1}. ${benefitTitle}`;
+
+        // Add cycle type info
+        if (benefit.cycleType) {
+          const cycleMap = {
+            'MONTHLY': language === 'zh-TW' ? '每月' : 'Monthly',
+            'QUARTERLY': language === 'zh-TW' ? '每季' : 'Quarterly',
+            'SEMI_ANNUALLY': language === 'zh-TW' ? '半年' : 'Semi-annually',
+            'ANNUALLY': language === 'zh-TW' ? '每年' : 'Annually',
+          };
+          message += ` [${cycleMap[benefit.cycleType as keyof typeof cycleMap] || benefit.cycleType}]`;
+        }
+
+        // Add amount if available
+        if (benefit.amount) {
+          message += ` - ${benefit.currency} ${benefit.amount}`;
+        }
+
+        message += '\n';
+      });
+    } else {
+      message += `   ${language === 'zh-TW' ? '(尚無福利)' : '(No benefits)'}\n`;
+    }
+
+    message += '\n';
   });
 
   // Generate auto-login token
@@ -125,31 +192,29 @@ bot.hears(/我的信用卡|My Cards/, async (ctx) => {
   );
 });
 
-// View benefits command
-bot.hears(/查看福利|View Benefits/, async (ctx) => {
-  const telegramId = ctx.from.id.toString();
-  const language = await getUserLanguage(telegramId);
+// Helper function to query benefits expiring within time range
+async function queryExpiringBenefits(
+  userId: number,
+  range: '7' | 'month' | 'quarter',
+  language: string
+) {
   const year = new Date().getFullYear();
-
-  const user = await prisma.user.findUnique({
-    where: { telegramId },
-  });
-
-  if (!user) {
-    return ctx.reply('Please start the bot first with /start');
-  }
+  const now = new Date();
 
   const userCards = await prisma.userCard.findMany({
-    where: { userId: user.id },
+    where: { userId },
     include: {
       card: {
         include: {
           benefits: {
-            where: { isActive: true },
+            where: {
+              isActive: true,
+              notifiable: true,
+            },
             include: {
               userBenefits: {
                 where: {
-                  userId: user.id,
+                  userId,
                   year,
                 },
               },
@@ -161,36 +226,170 @@ bot.hears(/查看福利|View Benefits/, async (ctx) => {
   });
 
   if (userCards.length === 0) {
-    return ctx.reply(language === 'zh-TW' ? '您還沒有新增任何信用卡' : 'You have no cards yet');
+    return {
+      message: language === 'zh-TW' ? '您還沒有新增任何信用卡' : 'You have no cards yet',
+      hasCards: false,
+    };
   }
 
-  let message = language === 'zh-TW' ? `📊 ${year} 年度福利：\n\n` : `📊 ${year} Benefits:\n\n`;
+  // Calculate time range
+  let endDate: Date;
+  let rangeLabel: string;
 
-  userCards.forEach((uc) => {
+  if (range === '7') {
+    endDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    rangeLabel = language === 'zh-TW' ? '7天內到期' : 'Due in 7 days';
+  } else if (range === 'month') {
+    endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    rangeLabel = language === 'zh-TW' ? '當月到期' : 'This month';
+  } else if (range === 'quarter') {
+    const quarter = Math.floor(now.getMonth() / 3);
+    const quarterEndMonth = (quarter + 1) * 3;
+    endDate = new Date(now.getFullYear(), quarterEndMonth, 0, 23, 59, 59, 999);
+    rangeLabel = language === 'zh-TW' ? '當季到期' : 'This quarter';
+  } else {
+    return {
+      message: 'Invalid range',
+      hasCards: true,
+    };
+  }
+
+  let message = language === 'zh-TW' ? `📊 ${rangeLabel}福利：\n\n` : `📊 ${rangeLabel} Benefits:\n\n`;
+  let foundBenefits = false;
+
+  for (const uc of userCards) {
     const cardName = language === 'zh-TW' ? uc.card.name : (uc.card.nameEn || uc.card.name);
-    message += `🏦 ${cardName}\n`;
+    let cardBenefits = '';
 
-    uc.card.benefits.forEach((benefit) => {
-      const title = language === 'zh-TW' ? benefit.title : (benefit.titleEn || benefit.title);
-      const completed = benefit.userBenefits.length > 0 && benefit.userBenefits[0].isCompleted;
-      const status = completed ? '✅' : '⏳';
+    for (const benefit of uc.card.benefits) {
+      const userBenefit = benefit.userBenefits[0];
 
-      message += `  ${status} ${title}`;
-      if (benefit.amount) {
-        message += ` (${benefit.currency} ${benefit.amount})`;
+      // Skip completed benefits
+      if (userBenefit?.isCompleted) {
+        continue;
       }
-      message += '\n';
-    });
-    message += '\n';
+
+      // Calculate deadline
+      const deadline = calculateBenefitDeadline({
+        cycleType: benefit.cycleType,
+        isPersonalCycle: benefit.isPersonalCycle,
+        customStartDate: userBenefit?.customStartDate,
+        year,
+        cycleNumber: userBenefit?.cycleNumber,
+      });
+
+      // Check if benefit is within range
+      if (deadline && deadline >= now && deadline <= endDate) {
+        const title = language === 'zh-TW' ? benefit.title : (benefit.titleEn || benefit.title);
+        const daysLeft = Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+        cardBenefits += `  ⏳ ${title}`;
+        if (benefit.amount) {
+          cardBenefits += ` (${benefit.currency} ${benefit.amount})`;
+        }
+        cardBenefits += `\n     ⏰ ${language === 'zh-TW' ? '剩餘' : 'Days left'}: ${daysLeft} ${language === 'zh-TW' ? '天' : 'days'}\n`;
+        foundBenefits = true;
+      }
+    }
+
+    if (cardBenefits) {
+      message += `🏦 ${cardName}\n${cardBenefits}\n`;
+    }
+  }
+
+  if (!foundBenefits) {
+    message += language === 'zh-TW'
+      ? '✨ 目前沒有即將到期的福利！'
+      : '✨ No benefits expiring soon!';
+  }
+
+  return {
+    message,
+    hasCards: true,
+  };
+}
+
+// Handle keyboard button presses for benefit queries
+bot.hears(/📅 7天內到期|📅 Due in 7 days/, async (ctx) => {
+  const telegramId = ctx.from.id.toString();
+  const language = await getUserLanguage(telegramId);
+
+  const user = await prisma.user.findUnique({
+    where: { telegramId },
   });
 
-  // Generate auto-login token
+  if (!user) {
+    return ctx.reply('Please start the bot first with /start');
+  }
+
+  const result = await queryExpiringBenefits(user.id, '7', language);
+
   const token = await generateLoginToken(user.id, 'TELEGRAM');
   const backendUrl = process.env.BACKEND_URL || 'https://api.savvyaihelper.com';
   const autoLoginUrl = `${backendUrl}/api/auth/token?token=${token}`;
 
   await ctx.reply(
-    message,
+    result.message,
+    {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: language === 'zh-TW' ? '💻 開啟網站查看詳情' : '💻 Open Website', web_app: { url: autoLoginUrl } }]
+        ]
+      }
+    }
+  );
+});
+
+bot.hears(/📆 當月(到期)?福利|📆 This month/, async (ctx) => {
+  const telegramId = ctx.from.id.toString();
+  const language = await getUserLanguage(telegramId);
+
+  const user = await prisma.user.findUnique({
+    where: { telegramId },
+  });
+
+  if (!user) {
+    return ctx.reply('Please start the bot first with /start');
+  }
+
+  const result = await queryExpiringBenefits(user.id, 'month', language);
+
+  const token = await generateLoginToken(user.id, 'TELEGRAM');
+  const backendUrl = process.env.BACKEND_URL || 'https://api.savvyaihelper.com';
+  const autoLoginUrl = `${backendUrl}/api/auth/token?token=${token}`;
+
+  await ctx.reply(
+    result.message,
+    {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: language === 'zh-TW' ? '💻 開啟網站查看詳情' : '💻 Open Website', web_app: { url: autoLoginUrl } }]
+        ]
+      }
+    }
+  );
+});
+
+bot.hears(/📆 當季(到期)?福利|📆 This quarter/, async (ctx) => {
+  const telegramId = ctx.from.id.toString();
+  const language = await getUserLanguage(telegramId);
+
+  const user = await prisma.user.findUnique({
+    where: { telegramId },
+  });
+
+  if (!user) {
+    return ctx.reply('Please start the bot first with /start');
+  }
+
+  const result = await queryExpiringBenefits(user.id, 'quarter', language);
+
+  const token = await generateLoginToken(user.id, 'TELEGRAM');
+  const backendUrl = process.env.BACKEND_URL || 'https://api.savvyaihelper.com';
+  const autoLoginUrl = `${backendUrl}/api/auth/token?token=${token}`;
+
+  await ctx.reply(
+    result.message,
     {
       reply_markup: {
         inline_keyboard: [
@@ -229,8 +428,10 @@ bot.action(/lang_(.+)/, async (ctx) => {
   await ctx.reply(
     language === 'zh-TW' ? '語言已設定為繁體中文' : 'Language set to English',
     Markup.keyboard([
-      [i18next.t('commands.mycards', { lng: language }), i18next.t('commands.benefits', { lng: language })],
-      [i18next.t('commands.addcard', { lng: language }), i18next.t('commands.settings', { lng: language })],
+      [i18next.t('commands.mycards', { lng: language })],
+      [language === 'zh-TW' ? '📅 7天內到期' : '📅 Due in 7 days'],
+      [language === 'zh-TW' ? '📆 當月到期福利' : '📆 This month', language === 'zh-TW' ? '📆 當季到期福利' : '📆 This quarter'],
+      [i18next.t('commands.settings', { lng: language })],
     ]).resize()
   );
 });
