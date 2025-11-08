@@ -115,9 +115,13 @@ bot.hears(/我的信用卡|My Cards/, async (ctx) => {
 
   await ctx.reply(
     message,
-    Markup.inlineKeyboard([
-      [Markup.button.url(language === 'zh-TW' ? '💻 開啟網站管理' : '💻 Open Website', autoLoginUrl)]
-    ])
+    {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: language === 'zh-TW' ? '💻 開啟網站管理' : '💻 Open Website', web_app: { url: autoLoginUrl } }]
+        ]
+      }
+    }
   );
 });
 
@@ -187,9 +191,13 @@ bot.hears(/查看福利|View Benefits/, async (ctx) => {
 
   await ctx.reply(
     message,
-    Markup.inlineKeyboard([
-      [Markup.button.url(language === 'zh-TW' ? '💻 開啟網站查看詳情' : '💻 Open Website', autoLoginUrl)]
-    ])
+    {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: language === 'zh-TW' ? '💻 開啟網站查看詳情' : '💻 Open Website', web_app: { url: autoLoginUrl } }]
+        ]
+      }
+    }
   );
 });
 

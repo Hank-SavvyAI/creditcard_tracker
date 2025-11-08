@@ -163,7 +163,10 @@ router.post('/webhook', async (req, res) => {
         });
 
         if (!user) {
-          // User not found - ask them to login first
+          // User not found - direct them to LINE OAuth login
+          const backendUrl = process.env.BACKEND_URL || 'https://api.savvyaihelper.com';
+          const lineLoginUrl = `${backendUrl}/api/auth/line`;
+
           await replyLineMessage(replyToken, [
             {
               type: 'text',
@@ -175,7 +178,7 @@ router.post('/webhook', async (req, res) => {
                     action: {
                       type: 'uri',
                       label: '🔐 LINE 登入',
-                      uri: process.env.FRONTEND_URL || 'https://cards.savvyaihelper.com'
+                      uri: lineLoginUrl  // Direct to LINE OAuth
                     }
                   }
                 ]
@@ -336,12 +339,19 @@ router.post('/webhook', async (req, res) => {
           where: { lineId: lineUserId },
         });
 
-        let websiteUrl = process.env.FRONTEND_URL || 'https://cards.savvyaihelper.com';
+        const backendUrl = process.env.BACKEND_URL || 'https://api.savvyaihelper.com';
+        let websiteUrl: string;
+        let websiteButtonLabel: string;
 
         // If user exists, generate auto-login token
         if (user) {
           const loginToken = await generateLineLoginToken(user.id);
-          websiteUrl = `${process.env.BACKEND_URL || 'https://api.savvyaihelper.com'}/api/line/auth?token=${loginToken}`;
+          websiteUrl = `${backendUrl}/api/auth/token?token=${loginToken}`;
+          websiteButtonLabel = '💻 開啟網站';
+        } else {
+          // If user doesn't exist, direct to LINE OAuth login
+          websiteUrl = `${backendUrl}/api/auth/line`;
+          websiteButtonLabel = '🔐 LINE 登入';
         }
 
         // Send welcome message with quick reply buttons
@@ -349,7 +359,7 @@ router.post('/webhook', async (req, res) => {
           {
             type: 'text',
             text: '🎉 歡迎使用信用卡福利追蹤小幫手！\n\n' +
-                  '📌 要查詢多久到期的福利？',
+                  (user ? '📌 要查詢多久到期的福利？' : '📌 請先登入以開始使用：'),
             quickReply: {
               items: [
                 {
@@ -380,7 +390,7 @@ router.post('/webhook', async (req, res) => {
                   type: 'action',
                   action: {
                     type: 'uri',
-                    label: '💻 開啟網站',
+                    label: websiteButtonLabel,
                     uri: websiteUrl
                   }
                 }

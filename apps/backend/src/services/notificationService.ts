@@ -117,7 +117,6 @@ async function sendTelegramNotification(telegramId: string, userId: number, titl
   // 這裡需要使用你的 Telegram bot
   // 暫時先 import bot，實際使用時需要確保 bot 已初始化
   const { bot } = await import('../bot');
-  const { Markup } = await import('telegraf');
 
   const message = `🔔 *${title}*\n\n${body}`;
 
@@ -128,9 +127,11 @@ async function sendTelegramNotification(telegramId: string, userId: number, titl
 
   await bot.telegram.sendMessage(telegramId, message, {
     parse_mode: 'Markdown',
-    ...Markup.inlineKeyboard([
-      [Markup.button.url('💻 開啟網站查看', autoLoginUrl)]
-    ])
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: '💻 開啟網站查看', web_app: { url: autoLoginUrl } }]
+      ]
+    }
   });
 }
 

@@ -1,41 +1,26 @@
 'use client';
 
-import { useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
-function LineCallbackContent() {
+/**
+ * Legacy LINE callback page - redirects to new auto-login page
+ * This ensures backward compatibility with old links
+ */
+export default function LineCallbackPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   useEffect(() => {
-    const token = searchParams.get('token');
-
-    if (token) {
-      // Save token to localStorage
-      localStorage.setItem('token', token);
-
-      // Trigger auth-change event
-      window.dispatchEvent(new Event('auth-change'));
-
-      // Redirect to dashboard
-      router.push('/dashboard');
-    } else {
-      // No token, redirect to home
-      router.push('/');
-    }
-  }, [searchParams, router]);
+    // Redirect to new auto-login page
+    // Preserve hash and query parameters
+    const hash = window.location.hash;
+    const search = window.location.search;
+    router.replace(`/auth/auto-login${search}${hash}`);
+  }, [router]);
 
   return (
     <div className="loading">
-      自動登入中...
+      重新導向中...
     </div>
-  );
-}
-
-export default function LineCallbackPage() {
-  return (
-    <Suspense fallback={<div className="loading">載入中...</div>}>
-      <LineCallbackContent />
-    </Suspense>
   );
 }

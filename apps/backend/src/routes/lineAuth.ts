@@ -80,8 +80,11 @@ router.get('/token', async (req, res) => {
         process.env.JWT_SECRET || 'your-secret-key',
         { expiresIn: '30d' }
       );
+
+      // Redirect with token in query parameter
+      // Token will be cleared from URL immediately after being read by frontend
       const frontendUrl = process.env.FRONTEND_URL || 'https://cards.savvyaihelper.com';
-      return res.redirect(`${frontendUrl}/auth/line-callback?token=${jwtToken}`);
+      return res.redirect(`${frontendUrl}/auth/auto-login?token=${jwtToken}`);
     }
 
     // Mark token as used
@@ -101,9 +104,10 @@ router.get('/token', async (req, res) => {
       { expiresIn: '30d' }
     );
 
-    // Redirect to dashboard with token in URL
+    // Redirect with token in query parameter
+    // Token will be cleared from URL immediately after being read by frontend
     const frontendUrl = process.env.FRONTEND_URL || 'https://cards.savvyaihelper.com';
-    res.redirect(`${frontendUrl}/auth/line-callback?token=${jwtToken}`);
+    res.redirect(`${frontendUrl}/auth/auto-login?token=${jwtToken}`);
   } catch (error) {
     console.error('❌ LINE auto-login error:', error);
     res.status(500).json({ error: 'Failed to authenticate' });
