@@ -61,10 +61,10 @@ export class ApiClient {
     return this.request('/api/cards/my');
   }
 
-  async addCard(cardId: number, nickname?: string) {
+  async addCard(cardId: number, nickname?: string, benefitStartDates?: Record<number, string>) {
     return this.request('/api/cards/my', {
       method: 'POST',
-      body: JSON.stringify({ cardId, nickname }),
+      body: JSON.stringify({ cardId, nickname, benefitStartDates }),
     });
   }
 

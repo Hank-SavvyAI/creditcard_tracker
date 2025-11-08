@@ -2,6 +2,7 @@ import { Router } from 'express';
 import axios from 'axios';
 import crypto from 'crypto';
 import { prisma } from '../lib/prisma';
+import { generateLineLoginToken } from './lineAuth';
 
 const router = Router();
 
@@ -174,7 +175,7 @@ router.post('/webhook', async (req, res) => {
                     action: {
                       type: 'uri',
                       label: '🔐 LINE 登入',
-                      uri: process.env.FRONTEND_URL || 'https://benefits.savvyaihelper.com'
+                      uri: process.env.FRONTEND_URL || 'https://cards.savvyaihelper.com'
                     }
                   }
                 ]
@@ -227,6 +228,10 @@ router.post('/webhook', async (req, res) => {
 
           const replyText = formatBenefitsMessage(benefitsData, days);
 
+          // Generate auto-login token for quick access
+          const loginToken = await generateLineLoginToken(user.id);
+          const autoLoginUrl = `${process.env.BACKEND_URL || 'https://api.savvyaihelper.com'}/api/line/auth?token=${loginToken}`;
+
           await replyLineMessage(replyToken, [
             {
               type: 'text',
@@ -262,7 +267,7 @@ router.post('/webhook', async (req, res) => {
                     action: {
                       type: 'uri',
                       label: '💻 網站',
-                      uri: `${process.env.FRONTEND_URL}/dashboard` || 'https://benefits.savvyaihelper.com/dashboard'
+                      uri: autoLoginUrl
                     }
                   }
                 ]
@@ -271,6 +276,10 @@ router.post('/webhook', async (req, res) => {
           ]);
         } else {
           // Generic help message with quick reply buttons
+          // Generate auto-login token for quick access
+          const loginToken = await generateLineLoginToken(user.id);
+          const autoLoginUrl = `${process.env.BACKEND_URL || 'https://api.savvyaihelper.com'}/api/line/auth?token=${loginToken}`;
+
           await replyLineMessage(replyToken, [
             {
               type: 'text',
@@ -307,7 +316,7 @@ router.post('/webhook', async (req, res) => {
                     action: {
                       type: 'uri',
                       label: '💻 開啟網站',
-                      uri: process.env.FRONTEND_URL || 'https://benefits.savvyaihelper.com'
+                      uri: autoLoginUrl
                     }
                   }
                 ]
@@ -321,6 +330,19 @@ router.post('/webhook', async (req, res) => {
       if (event.type === 'follow') {
         const lineUserId = event.source.userId;
         console.log(`➕ User ${lineUserId} added bot as friend`);
+
+        // Check if user exists
+        const user = await prisma.user.findUnique({
+          where: { lineId: lineUserId },
+        });
+
+        let websiteUrl = process.env.FRONTEND_URL || 'https://cards.savvyaihelper.com';
+
+        // If user exists, generate auto-login token
+        if (user) {
+          const loginToken = await generateLineLoginToken(user.id);
+          websiteUrl = `${process.env.BACKEND_URL || 'https://api.savvyaihelper.com'}/api/line/auth?token=${loginToken}`;
+        }
 
         // Send welcome message with quick reply buttons
         await pushLineMessage(lineUserId, [
@@ -359,7 +381,7 @@ router.post('/webhook', async (req, res) => {
                   action: {
                     type: 'uri',
                     label: '💻 開啟網站',
-                    uri: process.env.FRONTEND_URL || 'https://benefits.savvyaihelper.com'
+                    uri: websiteUrl
                   }
                 }
               ]

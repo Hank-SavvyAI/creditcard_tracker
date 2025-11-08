@@ -2,6 +2,7 @@ import { Telegraf, Context, Markup } from 'telegraf';
 import { prisma } from '../lib/prisma';
 import { i18next, initI18n } from '../lib/i18n';
 import jwt from 'jsonwebtoken';
+import { generateLoginToken } from '../routes/lineAuth';
 
 initI18n();
 
@@ -107,7 +108,17 @@ bot.hears(/我的信用卡|My Cards/, async (ctx) => {
     }
   });
 
-  await ctx.reply(message);
+  // Generate auto-login token
+  const token = await generateLoginToken(user.id, 'TELEGRAM');
+  const backendUrl = process.env.BACKEND_URL || 'https://api.savvyaihelper.com';
+  const autoLoginUrl = `${backendUrl}/api/line/auth?token=${token}`;
+
+  await ctx.reply(
+    message,
+    Markup.inlineKeyboard([
+      [Markup.button.url(language === 'zh-TW' ? '💻 開啟網站管理' : '💻 Open Website', autoLoginUrl)]
+    ])
+  );
 });
 
 // View benefits command
@@ -169,7 +180,17 @@ bot.hears(/查看福利|View Benefits/, async (ctx) => {
     message += '\n';
   });
 
-  await ctx.reply(message);
+  // Generate auto-login token
+  const token = await generateLoginToken(user.id, 'TELEGRAM');
+  const backendUrl = process.env.BACKEND_URL || 'https://api.savvyaihelper.com';
+  const autoLoginUrl = `${backendUrl}/api/line/auth?token=${token}`;
+
+  await ctx.reply(
+    message,
+    Markup.inlineKeyboard([
+      [Markup.button.url(language === 'zh-TW' ? '💻 開啟網站查看詳情' : '💻 Open Website', autoLoginUrl)]
+    ])
+  );
 });
 
 // Settings command

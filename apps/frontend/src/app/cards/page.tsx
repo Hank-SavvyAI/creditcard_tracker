@@ -17,6 +17,9 @@ export default function CardsPage() {
   const [selectedBank, setSelectedBank] = useState<string>('')
   const [selectedType, setSelectedType] = useState<string>('')
   const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set())
+  const [showDateModal, setShowDateModal] = useState(false)
+  const [pendingCard, setPendingCard] = useState<any>(null)
+  const [benefitStartDates, setBenefitStartDates] = useState<Record<number, string>>({})
 
   const toggleCardExpand = (cardId: number) => {
     setExpandedCards(prev => {
@@ -79,10 +82,35 @@ export default function CardsPage() {
       return
     }
 
+    // Find the card to check for personal cycle benefits
+    const card = cards.find(c => c.id === cardId)
+    const personalCycleBenefits = card?.benefits?.filter((b: any) => b.isPersonalCycle) || []
+
+    // If there are personal cycle benefits, show modal to collect dates
+    if (personalCycleBenefits.length > 0) {
+      setPendingCard(card)
+      // Initialize dates for each personal cycle benefit
+      const initialDates: Record<number, string> = {}
+      personalCycleBenefits.forEach((b: any) => {
+        initialDates[b.id] = ''
+      })
+      setBenefitStartDates(initialDates)
+      setShowDateModal(true)
+      return
+    }
+
+    // Otherwise, track directly without dates
+    await performTrackCard(cardId, {})
+  }
+
+  async function performTrackCard(cardId: number, startDates: Record<number, string>) {
     setTrackingCard(cardId)
     try {
-      await api.addCard(cardId)
+      await api.addCard(cardId, undefined, startDates)
       alert(language === 'zh-TW' ? '已成功追蹤此信用卡！' : 'Card tracked successfully!')
+      setShowDateModal(false)
+      setPendingCard(null)
+      setBenefitStartDates({})
     } catch (error: any) {
       console.error('Failed to track card:', error)
       const errorMessage = error.message || ''
@@ -96,6 +124,23 @@ export default function CardsPage() {
     } finally {
       setTrackingCard(null)
     }
+  }
+
+  function handleDateModalSubmit() {
+    // Validate that all dates are filled
+    const allDatesValid = Object.values(benefitStartDates).every(date => date !== '')
+    if (!allDatesValid) {
+      alert(language === 'zh-TW' ? '請填寫所有福利的起始日期' : 'Please fill in all benefit start dates')
+      return
+    }
+
+    performTrackCard(pendingCard.id, benefitStartDates)
+  }
+
+  function handleDateModalCancel() {
+    setShowDateModal(false)
+    setPendingCard(null)
+    setBenefitStartDates({})
   }
 
   // 獲取所有銀行列表（從當前地區的卡片中）
@@ -203,12 +248,12 @@ export default function CardsPage() {
             backgroundColor: 'var(--card-bg)',
             borderRadius: '12px',
             boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-          }}>
+          }} className="filter-section">
             <div style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
               gap: '1rem'
-            }}>
+            }} className="filter-grid">
               {/* 關鍵字搜尋 */}
               <div>
                 <label style={{
@@ -500,6 +545,110 @@ export default function CardsPage() {
             </div>
           )}
         </>
+      )}
+
+      {/* Modal for Personal Cycle Benefits Start Dates */}
+      {showDateModal && pendingCard && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '1rem'
+        }}>
+          <div style={{
+            backgroundColor: 'var(--card-bg)',
+            borderRadius: '12px',
+            padding: '2rem',
+            maxWidth: '500px',
+            width: '100%',
+            maxHeight: '80vh',
+            overflow: 'auto',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.3)'
+          }} className="benefit-start-date-modal">
+            <h2 style={{ marginBottom: '1rem', color: 'var(--primary-color)' }}>
+              {language === 'zh-TW' ? '設定福利起始日期' : 'Set Benefit Start Dates'}
+            </h2>
+
+            <p style={{ marginBottom: '1.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+              {language === 'zh-TW'
+                ? '此卡片包含需要個人化起始日期的福利（例如：開卡日期）。請為以下福利設定起始日期：'
+                : 'This card has benefits that require personalized start dates (e.g., card activation date). Please set start dates for the following benefits:'}
+            </p>
+
+            {pendingCard.benefits
+              ?.filter((b: any) => b.isPersonalCycle)
+              .map((benefit: any) => (
+                <div key={benefit.id} style={{
+                  marginBottom: '1.5rem',
+                  padding: '1rem',
+                  backgroundColor: 'var(--background)',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color)'
+                }}>
+                  <div style={{ marginBottom: '0.75rem' }}>
+                    <div style={{ fontWeight: '600', color: 'var(--text-color)', marginBottom: '0.25rem' }}>
+                      {language === 'zh-TW' ? benefit.title : (benefit.titleEn || benefit.title)}
+                    </div>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                      {language === 'zh-TW' ? benefit.description : (benefit.descriptionEn || benefit.description)}
+                    </div>
+                  </div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '0.5rem',
+                    fontSize: '0.9rem',
+                    fontWeight: '500',
+                    color: 'var(--text-color)'
+                  }}>
+                    {language === 'zh-TW' ? '起始日期：' : 'Start Date:'}
+                  </label>
+                  <input
+                    type="date"
+                    value={benefitStartDates[benefit.id] || ''}
+                    onChange={(e) => setBenefitStartDates(prev => ({
+                      ...prev,
+                      [benefit.id]: e.target.value
+                    }))}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-color)',
+                      fontSize: '1rem',
+                      backgroundColor: 'var(--card-bg)'
+                    }}
+                  />
+                </div>
+              ))}
+
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+              <button
+                onClick={handleDateModalCancel}
+                className="btn btn-secondary"
+                style={{ flex: 1 }}
+              >
+                {language === 'zh-TW' ? '取消' : 'Cancel'}
+              </button>
+              <button
+                onClick={handleDateModalSubmit}
+                className="btn btn-primary"
+                style={{ flex: 1 }}
+                disabled={trackingCard !== null}
+              >
+                {trackingCard !== null
+                  ? (language === 'zh-TW' ? '追蹤中...' : 'Tracking...')
+                  : (language === 'zh-TW' ? '確認追蹤' : 'Confirm Track')}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

@@ -2,6 +2,7 @@ import { prisma } from '../lib/prisma';
 import webpush from 'web-push';
 import nodemailer from 'nodemailer';
 import axios from 'axios';
+import { generateLoginToken } from '../routes/lineAuth';
 
 // Email transporter setup (使用 Gmail SMTP)
 const emailTransporter = nodemailer.createTransport({
@@ -51,7 +52,7 @@ export async function sendNotification(notificationData: NotificationData) {
     // 1. 發送 Telegram 通知（如果有 telegramId）
     if (user.telegramId) {
       try {
-        await sendTelegramNotification(user.telegramId, title, body);
+        await sendTelegramNotification(user.telegramId, userId, title, body);
         results.telegram = true;
         console.log(`✅ Telegram notification sent to user ${userId}`);
       } catch (error: any) {
@@ -112,15 +113,24 @@ export async function sendNotification(notificationData: NotificationData) {
 /**
  * 發送 Telegram 通知
  */
-async function sendTelegramNotification(telegramId: string, title: string, body: string) {
+async function sendTelegramNotification(telegramId: string, userId: number, title: string, body: string) {
   // 這裡需要使用你的 Telegram bot
   // 暫時先 import bot，實際使用時需要確保 bot 已初始化
   const { bot } = await import('../bot');
+  const { Markup } = await import('telegraf');
 
   const message = `🔔 *${title}*\n\n${body}`;
 
+  // Generate auto-login token
+  const token = await generateLoginToken(userId, 'TELEGRAM');
+  const backendUrl = process.env.BACKEND_URL || 'https://api.savvyaihelper.com';
+  const autoLoginUrl = `${backendUrl}/api/line/auth?token=${token}`;
+
   await bot.telegram.sendMessage(telegramId, message, {
     parse_mode: 'Markdown',
+    ...Markup.inlineKeyboard([
+      [Markup.button.url('💻 開啟網站查看', autoLoginUrl)]
+    ])
   });
 }
 

@@ -1,9 +1,25 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { useLanguageStore } from '@/store/language'
 
 export default function LanguageSwitcher() {
   const { language, setLanguage } = useLanguageStore()
+  const [isMounted, setIsMounted] = useState(false)
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  // Prevent hydration mismatch by not rendering until mounted
+  if (!isMounted) {
+    return (
+      <div className="language-switcher">
+        <button className="lang-btn">繁中</button>
+        <button className="lang-btn">EN</button>
+      </div>
+    )
+  }
 
   return (
     <div className="language-switcher">

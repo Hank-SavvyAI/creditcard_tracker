@@ -29,6 +29,7 @@ export default function NewBenefitPage() {
     endDay: '',
     reminderDays: '30',
     notifiable: true,
+    isPersonalCycle: false,
     isActive: true,
   })
 
@@ -307,6 +308,35 @@ export default function NewBenefitPage() {
                 關閉後，此福利不會顯示通知設定選項（適用於無時效性的永久福利）
               </small>
             </div>
+
+            <div className="form-group checkbox-group">
+              <label>
+                <input
+                  type="checkbox"
+                  name="isPersonalCycle"
+                  checked={formData.isPersonalCycle}
+                  onChange={handleChange}
+                />
+                <span>依用戶個人日期計算週期</span>
+              </label>
+              <small style={{ marginLeft: '1.5rem', color: '#666' }}>
+                勾選後，每個用戶需要自行設定此福利的起始日期（例如：開卡日、首次使用日）<br />
+                適用於：年費減免、週年禮、首年優惠等
+              </small>
+            </div>
+
+            {formData.isPersonalCycle && (
+              <div style={{
+                padding: '1rem',
+                background: '#e3f2fd',
+                border: '1px solid #2196f3',
+                borderRadius: '8px',
+                marginTop: '1rem',
+                fontSize: '0.9rem'
+              }}>
+                ℹ️ 此福利已設為個人化週期。用戶在追蹤此卡片時，需要輸入起始日期。
+              </div>
+            )}
 
             <div className="form-group checkbox-group">
               <label>

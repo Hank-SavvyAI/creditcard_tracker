@@ -17,6 +17,7 @@ import googleAuthRoutes from './routes/googleAuth';
 import pushNotificationRoutes from './routes/pushNotifications';
 import feedbackRoutes from './routes/feedback';
 import lineWebhookRoutes from './routes/lineWebhook';
+import lineAuthRoutes from './routes/lineAuth';
 
 dotenv.config();
 
@@ -27,6 +28,7 @@ const PORT = process.env.PORT || 5001;
 app.use(cors({
   origin: [
     'http://localhost:9000',
+    'http://192.168.68.83:9000',
     'http://poioit.tplinkdns.com:9000',
     'http://poioit.tplinkdns.com',
     'https://benefits.savvyaihelper.com',
@@ -66,6 +68,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/push', pushNotificationRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/line', lineWebhookRoutes);
+app.use('/api/line', lineAuthRoutes);
 
 // Error handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

@@ -2,42 +2,95 @@ import { prisma } from '../lib/prisma';
 
 /**
  * 計算當前週期編號
+ * @param cycleType 週期類型
+ * @param customStartDate 自定義起始日期（用於個人化週期）
  */
-function getCurrentCycle(cycleType: string | null): { year: number; cycleNumber: number | null; periodEnd: Date | null } {
+function getCurrentCycle(
+  cycleType: string | null,
+  customStartDate?: Date
+): { year: number; cycleNumber: number | null; periodEnd: Date | null } {
   const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth() + 1; // 1-12
+
+  // 如果有自定義起始日期，使用它作為基準計算週期
+  const baseDate = customStartDate || now;
+  const year = customStartDate ? baseDate.getFullYear() : now.getFullYear();
+  const month = baseDate.getMonth() + 1; // 1-12
+  const day = baseDate.getDate();
 
   if (!cycleType) {
     // 一次性福利，無週期
-    return { year, cycleNumber: null, periodEnd: null };
+    return { year: now.getFullYear(), cycleNumber: null, periodEnd: null };
   }
 
   let cycleNumber: number | null = null;
   let periodEnd: Date | null = null;
 
-  switch (cycleType) {
-    case 'MONTHLY':
-      cycleNumber = month; // 1-12
-      // 月底
-      periodEnd = new Date(year, month, 0, 23, 59, 59, 999);
-      break;
+  if (customStartDate) {
+    // 個人化週期：基於自定義起始日期計算
+    const daysSinceStart = Math.floor((now.getTime() - customStartDate.getTime()) / (1000 * 60 * 60 * 24));
 
-    case 'QUARTERLY':
-      cycleNumber = Math.ceil(month / 3); // 1-4
-      // 季度最後一天
-      const quarterEndMonth = cycleNumber * 3;
-      periodEnd = new Date(year, quarterEndMonth, 0, 23, 59, 59, 999);
-      break;
+    switch (cycleType) {
+      case 'MONTHLY':
+        // 計算已經過了幾個月
+        const monthsSinceStart = Math.floor(daysSinceStart / 30);
+        cycleNumber = (monthsSinceStart % 12) + 1; // 1-12
+        // 下一個月的同一天（減1天）
+        const nextMonthDate = new Date(customStartDate);
+        nextMonthDate.setMonth(nextMonthDate.getMonth() + monthsSinceStart + 1);
+        nextMonthDate.setDate(day - 1);
+        nextMonthDate.setHours(23, 59, 59, 999);
+        periodEnd = nextMonthDate;
+        break;
 
-    case 'YEARLY':
-      cycleNumber = 1;
-      // 年底
-      periodEnd = new Date(year, 11, 31, 23, 59, 59, 999);
-      break;
+      case 'QUARTERLY':
+        // 計算已經過了幾季
+        const quartersSinceStart = Math.floor(daysSinceStart / 90);
+        cycleNumber = (quartersSinceStart % 4) + 1; // 1-4
+        // 下一季的前一天
+        const nextQuarterDate = new Date(customStartDate);
+        nextQuarterDate.setMonth(nextQuarterDate.getMonth() + (quartersSinceStart + 1) * 3);
+        nextQuarterDate.setDate(day - 1);
+        nextQuarterDate.setHours(23, 59, 59, 999);
+        periodEnd = nextQuarterDate;
+        break;
+
+      case 'YEARLY':
+        // 計算已經過了幾年
+        const yearsSinceStart = Math.floor(daysSinceStart / 365);
+        cycleNumber = 1;
+        // 下一年的同一天（減1天）
+        const nextYearDate = new Date(customStartDate);
+        nextYearDate.setFullYear(nextYearDate.getFullYear() + yearsSinceStart + 1);
+        nextYearDate.setDate(day - 1);
+        nextYearDate.setHours(23, 59, 59, 999);
+        periodEnd = nextYearDate;
+        break;
+    }
+  } else {
+    // 標準週期：基於當前日期計算
+    switch (cycleType) {
+      case 'MONTHLY':
+        cycleNumber = month; // 1-12
+        // 月底
+        periodEnd = new Date(year, month, 0, 23, 59, 59, 999);
+        break;
+
+      case 'QUARTERLY':
+        cycleNumber = Math.ceil(month / 3); // 1-4
+        // 季度最後一天
+        const quarterEndMonth = cycleNumber * 3;
+        periodEnd = new Date(year, quarterEndMonth, 0, 23, 59, 59, 999);
+        break;
+
+      case 'YEARLY':
+        cycleNumber = 1;
+        // 年底
+        periodEnd = new Date(year, 11, 31, 23, 59, 59, 999);
+        break;
+    }
   }
 
-  return { year, cycleNumber, periodEnd };
+  return { year: customStartDate ? now.getFullYear() : year, cycleNumber, periodEnd };
 }
 
 /**
@@ -127,7 +180,11 @@ export async function archiveExpiredBenefits() {
  * 為用戶創建當前週期的福利記錄
  * 當用戶追蹤一張卡片時調用
  */
-export async function createCurrentCycleBenefits(userId: number, cardId: number) {
+export async function createCurrentCycleBenefits(
+  userId: number,
+  cardId: number,
+  benefitStartDates?: Record<number, string>
+) {
   const card = await prisma.creditCard.findUnique({
     where: { id: cardId },
     include: { benefits: true },
@@ -142,7 +199,14 @@ export async function createCurrentCycleBenefits(userId: number, cardId: number)
   for (const benefit of card.benefits) {
     if (!benefit.isActive) continue;
 
-    const { year, cycleNumber, periodEnd } = getCurrentCycle(benefit.cycleType);
+    // Check if this benefit has a custom start date
+    const customStartDate = benefitStartDates && benefitStartDates[benefit.id]
+      ? new Date(benefitStartDates[benefit.id])
+      : undefined;
+
+    const { year, cycleNumber, periodEnd } = benefit.isPersonalCycle && customStartDate
+      ? getCurrentCycle(benefit.cycleType, customStartDate)
+      : getCurrentCycle(benefit.cycleType);
 
     // 檢查是否已存在當前週期的記錄
     const existing = await prisma.userBenefit.findFirst({
@@ -162,6 +226,7 @@ export async function createCurrentCycleBenefits(userId: number, cardId: number)
           year,
           cycleNumber,
           periodEnd,
+          customStartDate: customStartDate || null,
         },
       });
       results.push(created);

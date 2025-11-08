@@ -90,7 +90,7 @@ router.get('/my', authenticate, async (req: AuthRequest, res) => {
 // Add card to user
 router.post('/my', authenticate, async (req: AuthRequest, res) => {
   try {
-    const { cardId, nickname } = req.body;
+    const { cardId, nickname, benefitStartDates } = req.body;
 
     // Check if card already exists for this user
     const existing = await prisma.userCard.findUnique({
@@ -116,6 +116,10 @@ router.post('/my', authenticate, async (req: AuthRequest, res) => {
         card: true,
       },
     });
+
+    // Create UserBenefit records for active benefits on this card
+    const { createCurrentCycleBenefits } = await import('../services/archive');
+    await createCurrentCycleBenefits(req.user!.id, cardId, benefitStartDates || {});
 
     res.json(userCard);
   } catch (error) {

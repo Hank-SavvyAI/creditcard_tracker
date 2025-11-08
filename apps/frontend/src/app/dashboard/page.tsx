@@ -111,7 +111,7 @@ export default function Dashboard() {
         <h1>
           {language === 'zh-TW' ? `我的信用卡福利 (${year})` : `My Credit Card Benefits (${year})`}
         </h1>
-        <div style={{ display: 'flex', gap: '1rem' }}>
+        <div style={{ display: 'flex', gap: '1rem' }} className="dashboard-actions">
           <div style={{ display: 'flex', gap: '0.5rem', marginRight: 'auto' }}>
             <button
               onClick={() => setViewMode('card')}
@@ -158,10 +158,10 @@ export default function Dashboard() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           {userCards.map((userCard) => (
-            <div key={userCard.id} className="card" style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start' }}>
+            <div key={userCard.id} className="card dashboard-card" style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start' }}>
               {/* 左側：卡片圖片 */}
               {userCard.card.photo && (
-                <div style={{ flexShrink: 0, width: '200px' }}>
+                <div style={{ flexShrink: 0, width: '200px' }} className="card-image-container">
                   <img
                     src={userCard.card.photo}
                     alt={language === 'zh-TW' ? userCard.card.name : (userCard.card.nameEn || userCard.card.name)}

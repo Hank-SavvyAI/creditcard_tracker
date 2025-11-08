@@ -32,6 +32,7 @@ export default function EditBenefitPage() {
     endDay: '',
     reminderDays: '30',
     notifiable: true,
+    isPersonalCycle: false,
     isActive: true,
   })
 
@@ -71,6 +72,7 @@ export default function EditBenefitPage() {
             endDay: foundBenefit.endDay ? String(foundBenefit.endDay) : '',
             reminderDays: foundBenefit.reminderDays ? String(foundBenefit.reminderDays) : '30',
             notifiable: foundBenefit.notifiable !== undefined ? foundBenefit.notifiable : true,
+            isPersonalCycle: foundBenefit.isPersonalCycle !== undefined ? foundBenefit.isPersonalCycle : false,
             isActive: foundBenefit.isActive !== undefined ? foundBenefit.isActive : true,
           })
         }
@@ -115,6 +117,7 @@ export default function EditBenefitPage() {
         endDay: formData.endDay ? parseInt(formData.endDay) : null,
         reminderDays: parseInt(formData.reminderDays),
         notifiable: formData.notifiable,
+        isPersonalCycle: formData.isPersonalCycle,
         isActive: formData.isActive,
       }
 
@@ -356,6 +359,37 @@ export default function EditBenefitPage() {
                 關閉後，此福利不會顯示通知設定選項（適用於無時效性的永久福利）
               </small>
             </div>
+
+            <div className="form-group checkbox-group">
+              <label>
+                <input
+                  type="checkbox"
+                  name="isPersonalCycle"
+                  checked={formData.isPersonalCycle}
+                  onChange={handleChange}
+                />
+                <span>依用戶個人日期計算週期</span>
+              </label>
+              <small style={{ marginLeft: '1.5rem', color: '#666' }}>
+                勾選後，每個用戶需要自行設定此福利的起始日期（例如：開卡日期）
+              </small>
+            </div>
+
+            {formData.isPersonalCycle && (
+              <div style={{
+                padding: '0.75rem 1rem',
+                backgroundColor: '#e7f3ff',
+                borderLeft: '4px solid #2196F3',
+                marginBottom: '1rem',
+                borderRadius: '4px'
+              }}>
+                <div style={{ color: '#1976D2', fontSize: '0.9rem' }}>
+                  ℹ️ 此福利已設為個人化週期。用戶在追蹤此卡片時，需要輸入起始日期。
+                  <br />
+                  例如：年費減免（開卡週年前消費免年費）
+                </div>
+              </div>
+            )}
 
             <div className="form-group checkbox-group">
               <label>

@@ -52,9 +52,32 @@ router.post('/cards/:cardId/benefits', async (req: AuthRequest, res) => {
     console.log('Creating benefit for card:', req.params.cardId);
     console.log('Request body:', req.body);
 
+    // 自動設定 cycleType（如果前端沒有提供）
+    let cycleType = req.body.cycleType;
+
+    if (!cycleType && req.body.frequency) {
+      // 根據 frequency 自動設定 cycleType
+      switch (req.body.frequency) {
+        case 'MONTHLY':
+        case 'QUARTERLY':
+        case 'YEARLY':
+          cycleType = req.body.frequency;
+          break;
+        case 'SEMI_ANNUALLY':
+          cycleType = 'YEARLY'; // 半年視為年度週期的一種
+          break;
+        case 'ONE_TIME':
+          cycleType = null; // 一次性福利沒有週期
+          break;
+        default:
+          cycleType = null;
+      }
+    }
+
     const benefit = await prisma.benefit.create({
       data: {
         ...req.body,
+        cycleType,
         cardId: parseInt(req.params.cardId),
       },
     });
@@ -75,9 +98,28 @@ router.patch('/benefits/:id', async (req: AuthRequest, res) => {
     console.log('Updating benefit:', req.params.id);
     console.log('Request body:', req.body);
 
+    // 自動設定 cycleType（如果 frequency 有變更）
+    let updateData = { ...req.body };
+
+    if (req.body.frequency && !req.body.cycleType) {
+      switch (req.body.frequency) {
+        case 'MONTHLY':
+        case 'QUARTERLY':
+        case 'YEARLY':
+          updateData.cycleType = req.body.frequency;
+          break;
+        case 'SEMI_ANNUALLY':
+          updateData.cycleType = 'YEARLY';
+          break;
+        case 'ONE_TIME':
+          updateData.cycleType = null;
+          break;
+      }
+    }
+
     const benefit = await prisma.benefit.update({
       where: { id: parseInt(req.params.id) },
-      data: req.body,
+      data: updateData,
     });
     res.json(benefit);
   } catch (error: any) {
