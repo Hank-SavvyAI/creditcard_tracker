@@ -124,7 +124,7 @@ async function sendTelegramNotification(telegramId: string, userId: number, titl
   // Generate auto-login token
   const token = await generateLoginToken(userId, 'TELEGRAM');
   const backendUrl = process.env.BACKEND_URL || 'https://api.savvyaihelper.com';
-  const autoLoginUrl = `${backendUrl}/api/line/auth?token=${token}`;
+  const autoLoginUrl = `${backendUrl}/api/auth/token?token=${token}`;
 
   await bot.telegram.sendMessage(telegramId, message, {
     parse_mode: 'Markdown',

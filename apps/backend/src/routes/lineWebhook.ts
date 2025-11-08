@@ -230,7 +230,7 @@ router.post('/webhook', async (req, res) => {
 
           // Generate auto-login token for quick access
           const loginToken = await generateLineLoginToken(user.id);
-          const autoLoginUrl = `${process.env.BACKEND_URL || 'https://api.savvyaihelper.com'}/api/line/auth?token=${loginToken}`;
+          const autoLoginUrl = `${process.env.BACKEND_URL || 'https://api.savvyaihelper.com'}/api/auth/token?token=${loginToken}`;
 
           await replyLineMessage(replyToken, [
             {
@@ -278,7 +278,7 @@ router.post('/webhook', async (req, res) => {
           // Generic help message with quick reply buttons
           // Generate auto-login token for quick access
           const loginToken = await generateLineLoginToken(user.id);
-          const autoLoginUrl = `${process.env.BACKEND_URL || 'https://api.savvyaihelper.com'}/api/line/auth?token=${loginToken}`;
+          const autoLoginUrl = `${process.env.BACKEND_URL || 'https://api.savvyaihelper.com'}/api/auth/token?token=${loginToken}`;
 
           await replyLineMessage(replyToken, [
             {

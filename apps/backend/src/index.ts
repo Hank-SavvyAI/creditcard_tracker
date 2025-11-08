@@ -68,7 +68,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/push', pushNotificationRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/line', lineWebhookRoutes);
-app.use('/api/line', lineAuthRoutes);
+app.use('/api/auth', lineAuthRoutes); // Auto-login endpoint (works for LINE, Telegram, Google)
 
 // Error handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

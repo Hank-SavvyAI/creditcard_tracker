@@ -111,7 +111,7 @@ bot.hears(/我的信用卡|My Cards/, async (ctx) => {
   // Generate auto-login token
   const token = await generateLoginToken(user.id, 'TELEGRAM');
   const backendUrl = process.env.BACKEND_URL || 'https://api.savvyaihelper.com';
-  const autoLoginUrl = `${backendUrl}/api/line/auth?token=${token}`;
+  const autoLoginUrl = `${backendUrl}/api/auth/token?token=${token}`;
 
   await ctx.reply(
     message,
@@ -183,7 +183,7 @@ bot.hears(/查看福利|View Benefits/, async (ctx) => {
   // Generate auto-login token
   const token = await generateLoginToken(user.id, 'TELEGRAM');
   const backendUrl = process.env.BACKEND_URL || 'https://api.savvyaihelper.com';
-  const autoLoginUrl = `${backendUrl}/api/line/auth?token=${token}`;
+  const autoLoginUrl = `${backendUrl}/api/auth/token?token=${token}`;
 
   await ctx.reply(
     message,

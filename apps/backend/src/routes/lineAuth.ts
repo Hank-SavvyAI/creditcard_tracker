@@ -36,9 +36,10 @@ export const generateLineLoginToken = (userId: number) => generateLoginToken(use
 
 /**
  * Auto-login endpoint using one-time token
- * GET /api/line/auth?token=xxx
+ * GET /api/auth/token?token=xxx
+ * Works for LINE, Telegram, and Google auto-login
  */
-router.get('/auth', async (req, res) => {
+router.get('/token', async (req, res) => {
   try {
     const { token } = req.query;
 
@@ -62,9 +63,25 @@ router.get('/auth', async (req, res) => {
       return res.status(401).json({ error: 'Token expired' });
     }
 
-    // Check if token was already used
+    // Check if token was already used - but if yes, check if it was recent (within 10 seconds)
+    // This handles the case where user clicks twice or browser refreshes
     if (loginToken.used) {
-      return res.status(401).json({ error: 'Token already used' });
+      const timeSinceCreation = Date.now() - loginToken.createdAt.getTime();
+      if (timeSinceCreation > 10000) { // More than 10 seconds ago
+        return res.status(401).json({ error: 'Token already used' });
+      }
+      // If used within 10 seconds, regenerate the same JWT and redirect
+      const jwtToken = jwt.sign(
+        {
+          id: loginToken.user.id,
+          username: loginToken.user.username,
+          role: loginToken.user.role
+        },
+        process.env.JWT_SECRET || 'your-secret-key',
+        { expiresIn: '30d' }
+      );
+      const frontendUrl = process.env.FRONTEND_URL || 'https://cards.savvyaihelper.com';
+      return res.redirect(`${frontendUrl}/auth/line-callback?token=${jwtToken}`);
     }
 
     // Mark token as used
