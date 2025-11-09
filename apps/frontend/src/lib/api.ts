@@ -74,6 +74,13 @@ export class ApiClient {
     });
   }
 
+  async updateCardSettings(cardId: number, settings: { nickname?: string; afChargeMonth?: number | null; afChargeDay?: number | null }) {
+    return this.request(`/api/cards/my/${cardId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(settings),
+    });
+  }
+
   // Benefits
   async getMyBenefits(year?: number) {
     const query = year ? `?year=${year}` : '';

@@ -127,6 +127,43 @@ router.post('/my', authenticate, async (req: AuthRequest, res) => {
   }
 });
 
+// Update user card settings
+router.patch('/my/:cardId', authenticate, async (req: AuthRequest, res) => {
+  try {
+    const { nickname, afChargeMonth, afChargeDay } = req.body;
+    const cardId = parseInt(req.params.cardId);
+
+    // Validate afChargeMonth and afChargeDay if provided
+    if (afChargeMonth !== undefined && afChargeMonth !== null && (afChargeMonth < 1 || afChargeMonth > 12)) {
+      return res.status(400).json({ error: 'Invalid month (must be 1-12)' });
+    }
+    if (afChargeDay !== undefined && afChargeDay !== null && (afChargeDay < 1 || afChargeDay > 31)) {
+      return res.status(400).json({ error: 'Invalid day (must be 1-31)' });
+    }
+
+    const userCard = await prisma.userCard.update({
+      where: {
+        userId_cardId: {
+          userId: req.user!.id,
+          cardId,
+        },
+      },
+      data: {
+        nickname,
+        afChargeMonth,
+        afChargeDay,
+      },
+      include: {
+        card: true,
+      },
+    });
+
+    res.json(userCard);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update card settings' });
+  }
+});
+
 // Remove card from user
 router.delete('/my/:cardId', authenticate, async (req: AuthRequest, res) => {
   try {

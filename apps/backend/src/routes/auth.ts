@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { prisma } from '../lib/prisma';
 import { body, validationResult } from 'express-validator';
 import axios from 'axios';
+import { pushLineMessage } from './lineWebhook';
 
 const router = Router();
 
@@ -133,6 +134,10 @@ router.get('/line/callback', async (req, res) => {
     const lineProfile = profileResponse.data;
     const { userId: lineId, displayName, pictureUrl } = lineProfile;
 
+    console.log('🔍 DEBUG - LINE OAuth Login:');
+    console.log('  LINE ID from OAuth:', lineId);
+    console.log('  Display Name:', displayName);
+
     // Find or create user
     let user = await prisma.user.findUnique({
       where: { lineId },
@@ -153,6 +158,8 @@ router.get('/line/callback', async (req, res) => {
         updatedAt: true,
       },
     });
+
+    const isNewUser = !user;
 
     if (!user) {
       user = await prisma.user.create({
@@ -187,6 +194,57 @@ router.get('/line/callback', async (req, res) => {
       process.env.JWT_SECRET!,
       { expiresIn: '30d' }
     );
+
+    // Send welcome message to LINE Bot (push message)
+    try {
+      await pushLineMessage(lineId, [
+        {
+          type: 'text',
+          text: isNewUser
+            ? `🎉 歡迎 ${displayName}！\n\n您已成功完成 LINE 登入！\n現在可以使用以下功能：`
+            : `👋 歡迎回來，${displayName}！\n\nLINE 登入成功！`,
+          quickReply: {
+            items: [
+              {
+                type: 'action',
+                action: {
+                  type: 'message',
+                  label: '💳 我的信用卡',
+                  text: '我的信用卡'
+                }
+              },
+              {
+                type: 'action',
+                action: {
+                  type: 'message',
+                  label: '📅 7天內到期',
+                  text: '7天內到期'
+                }
+              },
+              {
+                type: 'action',
+                action: {
+                  type: 'message',
+                  label: '📆 當月到期',
+                  text: '當月到期'
+                }
+              },
+              {
+                type: 'action',
+                action: {
+                  type: 'message',
+                  label: '📆 當季到期',
+                  text: '當季到期'
+                }
+              }
+            ]
+          }
+        }
+      ]);
+    } catch (error) {
+      console.error('Failed to send welcome message to LINE:', error);
+      // Continue even if push message fails
+    }
 
     // Redirect to frontend with token and user data (like Google OAuth)
     res.redirect(`${FRONTEND_URL}/auth/callback?token=${token}&user=${encodeURIComponent(JSON.stringify(user))}`);

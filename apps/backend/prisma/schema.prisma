@@ -103,6 +103,8 @@ model UserCard {
   userId        Int
   cardId        Int
   nickname      String?
+  afChargeMonth Int?            // Annual fee charge month (1-12)
+  afChargeDay   Int?            // Annual fee charge day (1-31)
   addedAt       DateTime        @default(now())
 
   user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)

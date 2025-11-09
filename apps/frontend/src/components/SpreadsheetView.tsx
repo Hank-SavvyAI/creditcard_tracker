@@ -10,6 +10,8 @@ interface Card {
   issuer: string
   annualFee: number
   currency: string
+  afChargeMonth?: number | null
+  afChargeDay?: number | null
 }
 
 interface Benefit {
@@ -50,6 +52,7 @@ export default function SpreadsheetView() {
       cardName: '卡片名稱',
       issuer: '發卡銀行',
       annualFee: '年費',
+      afChargeDate: '年費收取日',
       benefitName: '福利項目',
       totalAmount: '總額度',
       usedAmount: '已使用',
@@ -74,6 +77,7 @@ export default function SpreadsheetView() {
       cardName: 'Card Name',
       issuer: 'Issuer',
       annualFee: 'Annual Fee',
+      afChargeDate: 'AF Charge Date',
       benefitName: 'Benefit',
       totalAmount: 'Total Amount',
       usedAmount: 'Used',
@@ -115,54 +119,56 @@ export default function SpreadsheetView() {
 
         for (const userCard of data) {
           for (const benefit of userCard.card.benefits) {
-            // Only show benefits that have userBenefit records
-            if (benefit.userBenefits && benefit.userBenefits.length > 0) {
-              const userBenefit = benefit.userBenefits[0]
+            // Get userBenefit if it exists, otherwise create a default one
+            const userBenefit = benefit.userBenefits && benefit.userBenefits.length > 0
+              ? benefit.userBenefits[0]
+              : null
 
-              // Load usages for this benefit
-              let usages: BenefitUsage[] = []
-              if (benefit.amount && benefit.amount > 0) {
-                try {
-                  const usageResponse = await fetch(
-                    `${process.env.NEXT_PUBLIC_API_URL}/api/benefits/${benefit.id}/usage?year=${year}`,
-                    { headers: { Authorization: `Bearer ${token}` } }
-                  )
-                  if (usageResponse.ok) {
-                    const usageData = await usageResponse.json()
-                    usages = usageData.usages || []
-                  }
-                } catch (err) {
-                  console.error('Failed to load usages for benefit:', benefit.id, err)
+            // Load usages for this benefit
+            let usages: BenefitUsage[] = []
+            if (benefit.amount && benefit.amount > 0) {
+              try {
+                const usageResponse = await fetch(
+                  `${process.env.NEXT_PUBLIC_API_URL}/api/benefits/${benefit.id}/usage?year=${year}`,
+                  { headers: { Authorization: `Bearer ${token}` } }
+                )
+                if (usageResponse.ok) {
+                  const usageData = await usageResponse.json()
+                  usages = usageData.usages || []
                 }
+              } catch (err) {
+                console.error('Failed to load usages for benefit:', benefit.id, err)
               }
-
-              allBenefits.push({
-                id: userBenefit.id,
-                benefitId: benefit.id,
-                year: userBenefit.year,
-                cycleNumber: userBenefit.cycleNumber,
-                periodEnd: userBenefit.periodEnd,
-                isCompleted: userBenefit.isCompleted,
-                usedAmount: userBenefit.usedAmount || 0,
-                usages,
-                benefit: {
-                  id: benefit.id,
-                  name: language === 'zh-TW' ? benefit.title : (benefit.titleEn || benefit.title),
-                  totalAmount: benefit.amount || 0,
-                  currency: benefit.currency,
-                  cycleType: benefit.frequency,
-                  endMonth: benefit.endMonth,
-                  endDay: benefit.endDay,
-                  card: {
-                    id: userCard.card.id,
-                    name: language === 'zh-TW' ? userCard.card.name : (userCard.card.nameEn || userCard.card.name),
-                    issuer: language === 'zh-TW' ? userCard.card.issuer : (userCard.card.issuerEn || userCard.card.issuer),
-                    annualFee: userCard.card.annualFee,
-                    currency: userCard.card.currency,
-                  },
-                } as any,
-              })
             }
+
+            allBenefits.push({
+              id: userBenefit?.id || 0,
+              benefitId: benefit.id,
+              year: userBenefit?.year || year,
+              cycleNumber: userBenefit?.cycleNumber || null,
+              periodEnd: userBenefit?.periodEnd || null,
+              isCompleted: userBenefit?.isCompleted || false,
+              usedAmount: userBenefit?.usedAmount || 0,
+              usages,
+              benefit: {
+                id: benefit.id,
+                name: language === 'zh-TW' ? benefit.title : (benefit.titleEn || benefit.title),
+                totalAmount: benefit.amount || 0,
+                currency: benefit.currency,
+                cycleType: benefit.frequency,
+                endMonth: benefit.endMonth,
+                endDay: benefit.endDay,
+                card: {
+                  id: userCard.card.id,
+                  name: language === 'zh-TW' ? userCard.card.name : (userCard.card.nameEn || userCard.card.name),
+                  issuer: language === 'zh-TW' ? userCard.card.issuer : (userCard.card.issuerEn || userCard.card.issuer),
+                  annualFee: userCard.card.annualFee,
+                  currency: userCard.card.currency,
+                  afChargeMonth: userCard.afChargeMonth,
+                  afChargeDay: userCard.afChargeDay,
+                },
+              } as any,
+            })
           }
         }
         setData(allBenefits)
@@ -220,6 +226,7 @@ export default function SpreadsheetView() {
               <th style={headerCellStyle}>{t.cardName}</th>
               <th style={headerCellStyle}>{t.issuer}</th>
               <th style={headerCellStyle}>{t.annualFee}</th>
+              <th style={headerCellStyle}>{t.afChargeDate}</th>
               <th style={headerCellStyle}>{t.benefitName}</th>
               <th style={headerCellStyle}>{t.totalAmount}</th>
               <th style={headerCellStyle}>{t.usedAmount}</th>
@@ -272,6 +279,11 @@ export default function SpreadsheetView() {
                               ? `${item.benefit.card.currency || ''} ${item.benefit.card.annualFee.toFixed(2)}`
                               : '-'}
                           </td>
+                          <td style={{ ...rowStyle, textAlign: 'center', verticalAlign: 'top' }} rowSpan={totalCardRows}>
+                            {item.benefit.card.afChargeMonth && item.benefit.card.afChargeDay
+                              ? `${item.benefit.card.afChargeMonth}/${item.benefit.card.afChargeDay}`
+                              : '-'}
+                          </td>
                         </>
                       )}
                       <td style={rowStyle}>{item.benefit.name || '-'}</td>
@@ -280,15 +292,15 @@ export default function SpreadsheetView() {
                           ? `${item.benefit.currency || ''} ${item.benefit.totalAmount.toFixed(2)}`
                           : '-'}
                       </td>
-                      <td style={{ ...rowStyle, textAlign: 'right', color: '#dc3545' }}>
+                      <td style={{ ...rowStyle, textAlign: 'right', color: '#495057' }}>
                         {item.benefit.currency || ''} {(item.usedAmount || 0).toFixed(2)}
                       </td>
-                      <td style={{ ...rowStyle, textAlign: 'right', color: remaining > 0 ? '#28a745' : '#6c757d', fontWeight: '500' }}>
+                      <td style={{ ...rowStyle, textAlign: 'right', color: remaining > 0 ? '#dc3545' : '#6c757d', fontWeight: remaining > 0 ? '600' : '500' }}>
                         {item.benefit.currency || ''} {remaining.toFixed(2)}
                       </td>
                       <td style={rowStyle}>{getCycleLabel(item.benefit.cycleType, language)}</td>
                       <td style={rowStyle}>{formatPeriodEnd(item)}</td>
-                      <td style={rowStyle}>
+                      <td style={{ ...rowStyle, color: item.isCompleted ? '#28a745' : '#fd7e14', fontWeight: '600' }}>
                         {item.isCompleted ? t.completed : t.inProgress}
                       </td>
                     </tr>

@@ -203,6 +203,15 @@ router.post('/webhook', async (req, res) => {
           where: { lineId: lineUserId },
         });
 
+        // Debug: Check all users with LINE IDs
+        const allLineUsers = await prisma.user.findMany({
+          where: { lineId: { not: null } },
+          select: { id: true, lineId: true, username: true }
+        });
+        console.log('🔍 DEBUG - All users with LINE IDs:', allLineUsers);
+        console.log('🔍 DEBUG - Looking for lineId:', lineUserId);
+        console.log('🔍 DEBUG - Found user:', user ? `Yes (id: ${user.id})` : 'No');
+
         if (!user) {
           // User not found - direct them to LINE OAuth login
           const backendUrl = process.env.BACKEND_URL || 'https://api.savvyaihelper.com';
@@ -698,7 +707,7 @@ async function replyLineMessage(replyToken: string, messages: any[]) {
 /**
  * Push LINE message (uses Push API - counts toward quota)
  */
-async function pushLineMessage(userId: string, messages: any[]) {
+export async function pushLineMessage(userId: string, messages: any[]) {
   if (!process.env.LINE_CHANNEL_ACCESS_TOKEN) {
     console.warn('LINE_CHANNEL_ACCESS_TOKEN not configured');
     return;

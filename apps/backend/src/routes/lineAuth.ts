@@ -57,12 +57,6 @@ router.get('/token', async (req, res) => {
       return res.status(401).json({ error: 'Invalid token' });
     }
 
-    // Check if token is expired
-    if (new Date() > loginToken.expiresAt) {
-      await prisma.loginToken.delete({ where: { id: loginToken.id } });
-      return res.status(401).json({ error: 'Token expired' });
-    }
-
     // Check if token was already used - but if yes, check if it was recent (within 10 seconds)
     // This handles the case where user clicks twice or browser refreshes
     if (loginToken.used) {
