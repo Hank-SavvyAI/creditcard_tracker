@@ -92,24 +92,25 @@ router.post('/my', authenticate, async (req: AuthRequest, res) => {
   try {
     const { cardId, nickname, benefitStartDates } = req.body;
 
-    // Check if card already exists for this user
-    const existing = await prisma.userCard.findUnique({
+    // Find all existing instances of this card for this user
+    const existingCards = await prisma.userCard.findMany({
       where: {
-        userId_cardId: {
-          userId: req.user!.id,
-          cardId,
-        },
+        userId: req.user!.id,
+        cardId,
+      },
+      orderBy: {
+        cardInstance: 'desc',
       },
     });
 
-    if (existing) {
-      return res.status(400).json({ error: 'Card already tracked' });
-    }
+    // Determine the next card instance number
+    const nextInstance = existingCards.length > 0 ? existingCards[0].cardInstance + 1 : 1;
 
     const userCard = await prisma.userCard.create({
       data: {
         userId: req.user!.id,
         cardId,
+        cardInstance: nextInstance,
         nickname,
       },
       include: {
@@ -119,10 +120,11 @@ router.post('/my', authenticate, async (req: AuthRequest, res) => {
 
     // Create UserBenefit records for active benefits on this card
     const { createCurrentCycleBenefits } = await import('../services/archive');
-    await createCurrentCycleBenefits(req.user!.id, cardId, benefitStartDates || {});
+    await createCurrentCycleBenefits(req.user!.id, userCard.id, benefitStartDates || {});
 
     res.json(userCard);
   } catch (error) {
+    console.error('Failed to add card:', error);
     res.status(500).json({ error: 'Failed to add card' });
   }
 });

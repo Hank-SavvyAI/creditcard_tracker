@@ -102,6 +102,7 @@ model UserCard {
   id            Int             @id @default(autoincrement())
   userId        Int
   cardId        Int
+  cardInstance  Int             @default(1)  // 第幾張同樣的卡 (1, 2, 3, ...)
   nickname      String?
   afChargeMonth Int?            // Annual fee charge month (1-12)
   afChargeDay   Int?            // Annual fee charge day (1-31)
@@ -109,13 +110,15 @@ model UserCard {
 
   user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   card          CreditCard      @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  userBenefits  UserBenefit[]   // 此卡的福利使用記錄
 
-  @@unique([userId, cardId])
+  @@unique([userId, cardId, cardInstance])
 }
 
 model UserBenefit {
   id                Int             @id @default(autoincrement())
-  userId            Int
+  userId            Int             // 保留用於查詢
+  userCardId        Int             // 綁定到具體的 UserCard
   benefitId         Int
   year              Int
   cycleNumber       Int?            // 1-12(月), 1-4(季), 1(年), null(一次性)
@@ -131,10 +134,11 @@ model UserBenefit {
   updatedAt         DateTime        @updatedAt
 
   user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userCard      UserCard        @relation(fields: [userCardId], references: [id], onDelete: Cascade)
   benefit       Benefit         @relation(fields: [benefitId], references: [id], onDelete: Cascade)
   usages        BenefitUsage[]
 
-  @@unique([userId, benefitId, year, cycleNumber])
+  @@unique([userCardId, benefitId, year, cycleNumber])
 }
 
 model BenefitUsage {
@@ -153,6 +157,7 @@ model BenefitUsage {
 model UserBenefitHistory {
   id                Int             @id @default(autoincrement())
   userId            Int
+  userCardId        Int             // 記錄是哪張卡的福利
   benefitId         Int
   year              Int
   cycleNumber       Int?
@@ -172,6 +177,7 @@ model UserBenefitHistory {
   usages        BenefitUsageHistory[]
 
   @@index([userId, benefitId, year, cycleNumber])
+  @@index([userCardId, benefitId, year, cycleNumber])
 }
 
 // 歷史使用記錄表

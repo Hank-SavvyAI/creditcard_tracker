@@ -6,15 +6,72 @@ import { archiveExpiredBenefits, getUserBenefitHistory } from '../services/archi
 const router = Router();
 
 // Helper function to find or create UserBenefit
-async function findOrCreateUserBenefit(userId: number, benefitId: number, year: number) {
+async function findOrCreateUserBenefit(
+  userId: number,
+  benefitId: number,
+  year: number,
+  userCardId?: number
+) {
+  // If userCardId is provided, use it
+  if (userCardId) {
+    let userBenefit = await prisma.userBenefit.findFirst({
+      where: { userCardId, benefitId, year },
+    });
+
+    if (!userBenefit) {
+      userBenefit = await prisma.userBenefit.create({
+        data: {
+          userId,
+          userCardId,
+          benefitId,
+          year,
+          isCompleted: false,
+          notificationEnabled: true,
+        },
+      });
+    }
+
+    return userBenefit;
+  }
+
+  // Otherwise, find the UserCard that has this benefit
+  const benefit = await prisma.benefit.findUnique({
+    where: { id: benefitId },
+  });
+
+  if (!benefit) {
+    throw new Error('Benefit not found');
+  }
+
+  // Find user's cards that have this benefit
+  const userCards = await prisma.userCard.findMany({
+    where: {
+      userId,
+      cardId: benefit.cardId,
+    },
+  });
+
+  if (userCards.length === 0) {
+    throw new Error('User does not have this card');
+  }
+
+  // If user has multiple instances of this card, we need userCardId
+  if (userCards.length > 1) {
+    throw new Error('Multiple cards found. Please specify userCardId');
+  }
+
+  // Use the single UserCard
+  const userCard = userCards[0];
+
   let userBenefit = await prisma.userBenefit.findFirst({
-    where: { userId, benefitId, year },
+    where: { userCardId: userCard.id, benefitId, year },
   });
 
   if (!userBenefit) {
     userBenefit = await prisma.userBenefit.create({
       data: {
         userId,
+        userCardId: userCard.id,
         benefitId,
         year,
         isCompleted: false,
@@ -41,7 +98,7 @@ router.get('/my', authenticate, async (req: AuthRequest, res) => {
               include: {
                 userBenefits: {
                   where: {
-                    userId: req.user!.id,
+                    userCardId: undefined, // Will be set below
                     year,
                   },
                 },
@@ -52,7 +109,36 @@ router.get('/my', authenticate, async (req: AuthRequest, res) => {
       },
     });
 
-    res.json(userCards);
+    // Fix the userBenefits for each card to only show benefits for that specific UserCard
+    const fixedUserCards = await Promise.all(
+      userCards.map(async (userCard) => {
+        const benefits = await Promise.all(
+          userCard.card.benefits.map(async (benefit) => {
+            const userBenefits = await prisma.userBenefit.findMany({
+              where: {
+                userCardId: userCard.id,
+                benefitId: benefit.id,
+                year,
+              },
+            });
+            return {
+              ...benefit,
+              userBenefits,
+            };
+          })
+        );
+
+        return {
+          ...userCard,
+          card: {
+            ...userCard.card,
+            benefits,
+          },
+        };
+      })
+    );
+
+    res.json(fixedUserCards);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch benefits' });
   }
@@ -62,10 +148,15 @@ router.get('/my', authenticate, async (req: AuthRequest, res) => {
 router.post('/:benefitId/complete', authenticate, async (req: AuthRequest, res) => {
   try {
     const { benefitId } = req.params;
-    const { year, notes } = req.body;
+    const { year, notes, userCardId } = req.body;
     const currentYear = year || new Date().getFullYear();
 
-    const userBenefit = await findOrCreateUserBenefit(req.user!.id, parseInt(benefitId), currentYear);
+    const userBenefit = await findOrCreateUserBenefit(
+      req.user!.id,
+      parseInt(benefitId),
+      currentYear,
+      userCardId
+    );
 
     const updated = await prisma.userBenefit.update({
       where: { id: userBenefit.id },
@@ -77,8 +168,9 @@ router.post('/:benefitId/complete', authenticate, async (req: AuthRequest, res) 
     });
 
     res.json(updated);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to mark benefit as completed' });
+  } catch (error: any) {
+    const message = error.message || 'Failed to mark benefit as completed';
+    res.status(500).json({ error: message });
   }
 });
 
@@ -86,10 +178,15 @@ router.post('/:benefitId/complete', authenticate, async (req: AuthRequest, res) 
 router.post('/:benefitId/uncomplete', authenticate, async (req: AuthRequest, res) => {
   try {
     const { benefitId } = req.params;
-    const { year } = req.body;
+    const { year, userCardId } = req.body;
     const currentYear = year || new Date().getFullYear();
 
-    const userBenefit = await findOrCreateUserBenefit(req.user!.id, parseInt(benefitId), currentYear);
+    const userBenefit = await findOrCreateUserBenefit(
+      req.user!.id,
+      parseInt(benefitId),
+      currentYear,
+      userCardId
+    );
 
     const updated = await prisma.userBenefit.update({
       where: { id: userBenefit.id },
@@ -100,8 +197,9 @@ router.post('/:benefitId/uncomplete', authenticate, async (req: AuthRequest, res
     });
 
     res.json(updated);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to unmark benefit' });
+  } catch (error: any) {
+    const message = error.message || 'Failed to unmark benefit';
+    res.status(500).json({ error: message });
   }
 });
 
@@ -109,10 +207,15 @@ router.post('/:benefitId/uncomplete', authenticate, async (req: AuthRequest, res
 router.patch('/:benefitId/settings', authenticate, async (req: AuthRequest, res) => {
   try {
     const { benefitId } = req.params;
-    const { year, reminderDays, notificationEnabled } = req.body;
+    const { year, reminderDays, notificationEnabled, userCardId } = req.body;
     const currentYear = year || new Date().getFullYear();
 
-    const userBenefit = await findOrCreateUserBenefit(req.user!.id, parseInt(benefitId), currentYear);
+    const userBenefit = await findOrCreateUserBenefit(
+      req.user!.id,
+      parseInt(benefitId),
+      currentYear,
+      userCardId
+    );
 
     const updated = await prisma.userBenefit.update({
       where: { id: userBenefit.id },
@@ -123,9 +226,10 @@ router.patch('/:benefitId/settings', authenticate, async (req: AuthRequest, res)
     });
 
     res.json(updated);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to update notification settings:', error);
-    res.status(500).json({ error: 'Failed to update notification settings' });
+    const message = error.message || 'Failed to update notification settings';
+    res.status(500).json({ error: message });
   }
 });
 
@@ -133,7 +237,7 @@ router.patch('/:benefitId/settings', authenticate, async (req: AuthRequest, res)
 router.post('/:benefitId/usage', authenticate, async (req: AuthRequest, res) => {
   try {
     const { benefitId } = req.params;
-    const { year, amount, usedAt, note } = req.body;
+    const { year, amount, usedAt, note, userCardId } = req.body;
 
     if (!amount || amount <= 0) {
       return res.status(400).json({ error: 'Invalid amount' });
@@ -142,7 +246,12 @@ router.post('/:benefitId/usage', authenticate, async (req: AuthRequest, res) => 
     const currentYear = year || new Date().getFullYear();
 
     // Get or create UserBenefit
-    const userBenefit = await findOrCreateUserBenefit(req.user!.id, parseInt(benefitId), currentYear);
+    const userBenefit = await findOrCreateUserBenefit(
+      req.user!.id,
+      parseInt(benefitId),
+      currentYear,
+      userCardId
+    );
 
     // Create usage record
     const usage = await prisma.benefitUsage.create({
@@ -171,9 +280,10 @@ router.post('/:benefitId/usage', authenticate, async (req: AuthRequest, res) => 
     });
 
     res.json(updatedUserBenefit);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to add usage:', error);
-    res.status(500).json({ error: 'Failed to add usage record' });
+    const message = error.message || 'Failed to add usage record';
+    res.status(500).json({ error: message });
   }
 });
 
@@ -182,13 +292,20 @@ router.get('/:benefitId/usage', authenticate, async (req: AuthRequest, res) => {
   try {
     const { benefitId } = req.params;
     const year = parseInt(req.query.year as string) || new Date().getFullYear();
+    const userCardId = req.query.userCardId ? parseInt(req.query.userCardId as string) : undefined;
+
+    const where: any = {
+      userId: req.user!.id,
+      benefitId: parseInt(benefitId),
+      year,
+    };
+
+    if (userCardId) {
+      where.userCardId = userCardId;
+    }
 
     const userBenefit = await prisma.userBenefit.findFirst({
-      where: {
-        userId: req.user!.id,
-        benefitId: parseInt(benefitId),
-        year,
-      },
+      where,
       include: {
         usages: {
           orderBy: { usedAt: 'desc' },

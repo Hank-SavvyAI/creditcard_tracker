@@ -52,12 +52,12 @@ export default function Dashboard() {
     }
   }
 
-  async function toggleBenefit(benefitId: number, isCompleted: boolean) {
+  async function toggleBenefit(benefitId: number, isCompleted: boolean, userCardId: number) {
     try {
       if (isCompleted) {
-        await api.uncompleteBenefit(benefitId, year)
+        await api.uncompleteBenefit(benefitId, year, userCardId)
       } else {
-        await api.completeBenefit(benefitId, year)
+        await api.completeBenefit(benefitId, year, undefined, userCardId)
       }
       await loadData()
     } catch (error) {
@@ -65,9 +65,9 @@ export default function Dashboard() {
     }
   }
 
-  async function updateNotificationSettings(benefitId: number, settings: { reminderDays?: number; notificationEnabled?: boolean }) {
+  async function updateNotificationSettings(benefitId: number, settings: { reminderDays?: number; notificationEnabled?: boolean }, userCardId: number) {
     try {
-      await api.updateBenefitSettings(benefitId, year, settings)
+      await api.updateBenefitSettings(benefitId, year, settings, userCardId)
       await loadData()
     } catch (error) {
       console.error('Failed to update notification settings:', error)
@@ -192,8 +192,12 @@ export default function Dashboard() {
         </p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {userCards.map((userCard) => (
-            <div key={userCard.id} className="card dashboard-card" style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start' }}>
+          {userCards.map((userCard) => {
+            // Check if user has multiple instances of this card
+            const sameCards = userCards.filter(uc => uc.card.id === userCard.card.id)
+            const showCardInstance = sameCards.length > 1
+
+            return (<div key={userCard.id} className="card dashboard-card" style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start' }}>
               {/* 左側：卡片圖片 */}
               {userCard.card.photo && (
                 <div style={{ flexShrink: 0, width: '200px' }} className="card-image-container">
@@ -217,6 +221,11 @@ export default function Dashboard() {
                   <div>
                     <h2 className="card-title" style={{ margin: 0, marginBottom: '0.25rem', fontSize: '1.5rem' }}>
                       {language === 'zh-TW' ? userCard.card.name : (userCard.card.nameEn || userCard.card.name)}
+                      {showCardInstance && (
+                        <span style={{ fontSize: '1rem', color: '#6b7280', marginLeft: '0.5rem' }}>
+                          ({language === 'zh-TW' ? '卡片' : 'Card'} {userCard.cardInstance})
+                        </span>
+                      )}
                     </h2>
                     <p className="card-bank" style={{ margin: 0, fontSize: '0.9rem', color: '#666' }}>
                       🏦 {language === 'zh-TW' ? userCard.card.bank : (userCard.card.bankEn || userCard.card.bank)}
@@ -283,6 +292,7 @@ export default function Dashboard() {
                     <BenefitItem
                       key={benefit.id}
                       benefit={benefit}
+                      userCardId={userCard.id}
                       language={language}
                       year={year}
                       onToggle={toggleBenefit}
@@ -291,8 +301,8 @@ export default function Dashboard() {
                   ))}
                 </div>
               </div>
-            </div>
-          ))}
+            </div>)
+          })}
         </div>
       )}
 

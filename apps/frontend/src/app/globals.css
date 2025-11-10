@@ -664,6 +664,17 @@ body {
 
 /* ===== Mobile Responsive Design ===== */
 @media (max-width: 768px) {
+  /* Prevent horizontal overflow on mobile */
+  body {
+    overflow-x: hidden;
+  }
+
+  * {
+    max-width: 100%;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+
   /* Typography adjustments */
   .home-container h1 {
     font-size: 1.8rem;
@@ -686,6 +697,7 @@ body {
 
   .dashboard-header h1 {
     font-size: 1.5rem;
+    word-break: break-word;
   }
 
   /* Card grid - single column on mobile */
@@ -810,6 +822,7 @@ body {
   .dashboard-card {
     flex-direction: column !important;
     align-items: stretch !important;
+    padding: 1rem !important;
   }
 
   .card-image-container {
@@ -819,6 +832,36 @@ body {
 
   .dashboard-card > div {
     width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* Card title and button area - stack on mobile */
+  .dashboard-card > div > div:first-child {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 1rem !important;
+  }
+
+  /* Card title area */
+  .card-title {
+    font-size: 1.25rem !important;
+    word-break: break-word !important;
+  }
+
+  /* Button container in card */
+  .dashboard-card > div > div:first-child > div:last-child {
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 0.5rem !important;
+  }
+
+  /* Buttons in card header */
+  .dashboard-card > div > div:first-child > div:last-child > button {
+    width: 100% !important;
+    white-space: normal !important;
+    padding: 0.75rem 1rem !important;
+    justify-content: center !important;
+    text-align: center !important;
   }
 
   /* Header - stack navigation on mobile */
@@ -845,19 +888,47 @@ body {
   .benefit-row {
     flex-direction: column !important;
     align-items: stretch !important;
+    gap: 0.75rem !important;
   }
 
   .benefit-info {
     width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .benefit-title {
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+  }
+
+  .benefit-amount {
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
   }
 
   .benefit-actions {
     flex-direction: column !important;
     width: 100% !important;
+    gap: 0.5rem !important;
   }
 
   .benefit-actions button {
     width: 100% !important;
+    white-space: normal !important;
+    min-height: 40px !important;
+  }
+
+  /* Fix benefit item tables on mobile */
+  .benefit-item table {
+    display: block !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+  }
+
+  /* Card settings buttons - stack on mobile */
+  .dashboard-card button {
+    font-size: 0.85rem !important;
+    padding: 0.5rem 0.75rem !important;
   }
 
   /* Home page features grid - single column on mobile */
@@ -869,6 +940,42 @@ body {
   /* Login methods grid - single column on mobile */
   .login-grid {
     grid-template-columns: 1fr !important;
+  }
+
+  /* Fix notification settings panel on mobile */
+  .benefit-item > div > div:first-child {
+    padding: 0 !important;
+  }
+
+  /* Reminder days grid - 2 columns on mobile instead of 4 */
+  .benefit-item input[type="number"],
+  .benefit-item input[type="date"],
+  .benefit-item input[type="text"] {
+    font-size: 16px !important; /* Prevent zoom on iOS */
+  }
+
+  /* History modal - full screen on mobile */
+  .benefit-item > div[style*="position: fixed"] {
+    padding: 0.5rem !important;
+  }
+
+  .benefit-item > div[style*="position: fixed"] > div {
+    max-width: 100% !important;
+    margin: 0 !important;
+    border-radius: 8px !important;
+    max-height: 90vh !important;
+  }
+
+  /* Usage form - better mobile layout */
+  .benefit-item > div > div[style*="background: #f0f9ff"] {
+    margin-left: 0 !important;
+    padding: 0.75rem !important;
+  }
+
+  /* Cycle label badge - wrap text if needed */
+  .benefit-item span[style*="borderRadius: '12px'"] {
+    white-space: normal !important;
+    line-height: 1.4 !important;
   }
 }
 
@@ -918,5 +1025,35 @@ body {
 
   .benefit-start-date-modal p {
     font-size: 0.85rem !important;
+  }
+
+  /* Dashboard card - even tighter on small screens */
+  .dashboard-card {
+    padding: 0.75rem !important;
+  }
+
+  .card-title {
+    font-size: 1.1rem !important;
+  }
+
+  /* Benefit actions - smaller buttons */
+  .benefit-actions button {
+    font-size: 0.8rem !important;
+    padding: 0.6rem 0.75rem !important;
+  }
+
+  /* Settings panel - smaller text */
+  .benefit-item h4 {
+    font-size: 0.85rem !important;
+  }
+
+  /* Table text - smaller on very small screens */
+  .benefit-item table {
+    font-size: 0.75rem !important;
+  }
+
+  .benefit-item table th,
+  .benefit-item table td {
+    padding: 0.4rem !important;
   }
 }

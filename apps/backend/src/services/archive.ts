@@ -179,24 +179,32 @@ export async function archiveExpiredBenefits() {
 /**
  * 為用戶創建當前週期的福利記錄
  * 當用戶追蹤一張卡片時調用
+ * @param userId 用戶 ID（保留用於向後兼容）
+ * @param userCardId UserCard 的 ID
+ * @param benefitStartDates 個人化福利的起始日期
  */
 export async function createCurrentCycleBenefits(
   userId: number,
-  cardId: number,
+  userCardId: number,
   benefitStartDates?: Record<number, string>
 ) {
-  const card = await prisma.creditCard.findUnique({
-    where: { id: cardId },
-    include: { benefits: true },
+  // Get the UserCard to find the actual card
+  const userCard = await prisma.userCard.findUnique({
+    where: { id: userCardId },
+    include: {
+      card: {
+        include: { benefits: true },
+      },
+    },
   });
 
-  if (!card) {
-    throw new Error('Card not found');
+  if (!userCard) {
+    throw new Error('UserCard not found');
   }
 
   const results = [];
 
-  for (const benefit of card.benefits) {
+  for (const benefit of userCard.card.benefits) {
     if (!benefit.isActive) continue;
 
     // Check if this benefit has a custom start date
@@ -208,10 +216,10 @@ export async function createCurrentCycleBenefits(
       ? getCurrentCycle(benefit.cycleType, customStartDate)
       : getCurrentCycle(benefit.cycleType);
 
-    // 檢查是否已存在當前週期的記錄
+    // 檢查是否已存在當前週期的記錄（針對這張具體的卡片）
     const existing = await prisma.userBenefit.findFirst({
       where: {
-        userId,
+        userCardId,
         benefitId: benefit.id,
         year,
         cycleNumber,
@@ -222,6 +230,7 @@ export async function createCurrentCycleBenefits(
       const created = await prisma.userBenefit.create({
         data: {
           userId,
+          userCardId,
           benefitId: benefit.id,
           year,
           cycleNumber,

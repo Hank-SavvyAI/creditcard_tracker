@@ -5,10 +5,11 @@ import { getCurrentCycleLabel } from '@/lib/dateUtils'
 
 interface BenefitItemProps {
   benefit: any
+  userCardId: number
   language: string
   year: number
-  onToggle: (benefitId: number, isCompleted: boolean) => void
-  onUpdateSettings: (benefitId: number, settings: { reminderDays?: number; notificationEnabled?: boolean }) => void
+  onToggle: (benefitId: number, isCompleted: boolean, userCardId: number) => void
+  onUpdateSettings: (benefitId: number, settings: { reminderDays?: number; notificationEnabled?: boolean }, userCardId: number) => void
 }
 
 interface BenefitUsage {
@@ -18,7 +19,7 @@ interface BenefitUsage {
   note: string | null
 }
 
-export default function BenefitItem({ benefit, language, year, onToggle, onUpdateSettings }: BenefitItemProps) {
+export default function BenefitItem({ benefit, userCardId, language, year, onToggle, onUpdateSettings }: BenefitItemProps) {
   const [showSettings, setShowSettings] = useState(false)
   const [showUsageForm, setShowUsageForm] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
@@ -50,7 +51,7 @@ export default function BenefitItem({ benefit, language, year, onToggle, onUpdat
   const loadUsages = async () => {
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/benefits/${benefit.id}/usage?year=${year}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/benefits/${benefit.id}/usage?year=${year}&userCardId=${userCardId}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (response.ok) {
@@ -82,6 +83,7 @@ export default function BenefitItem({ benefit, language, year, onToggle, onUpdat
           amount: parseFloat(newUsage.amount),
           usedAt: newUsage.usedAt || new Date().toISOString().split('T')[0],
           note: newUsage.note || null,
+          userCardId,
         }),
       })
 
@@ -95,7 +97,7 @@ export default function BenefitItem({ benefit, language, year, onToggle, onUpdat
         // Auto-complete if used amount >= total amount
         const newUsedAmount = data.usedAmount || 0
         if (newUsedAmount >= totalAmount && !completed) {
-          onToggle(benefit.id, false)
+          onToggle(benefit.id, false, userCardId)
         }
       } else {
         alert(language === 'zh-TW' ? '新增失敗' : 'Failed to add usage')
@@ -113,7 +115,7 @@ export default function BenefitItem({ benefit, language, year, onToggle, onUpdat
 
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/benefits/${benefit.id}/usage/${usageId}?year=${year}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/benefits/${benefit.id}/usage/${usageId}?year=${year}&userCardId=${userCardId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       })
@@ -132,17 +134,17 @@ export default function BenefitItem({ benefit, language, year, onToggle, onUpdat
   }
 
   const handleReminderChange = (days: number) => {
-    onUpdateSettings(benefit.id, { reminderDays: days })
+    onUpdateSettings(benefit.id, { reminderDays: days }, userCardId)
   }
 
   const handleNotificationToggle = () => {
-    onUpdateSettings(benefit.id, { notificationEnabled: !notificationEnabled })
+    onUpdateSettings(benefit.id, { notificationEnabled: !notificationEnabled }, userCardId)
   }
 
   const loadHistory = async () => {
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/benefits/history?benefitId=${benefit.id}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/benefits/history?benefitId=${benefit.id}&userCardId=${userCardId}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (response.ok) {
@@ -385,7 +387,7 @@ export default function BenefitItem({ benefit, language, year, onToggle, onUpdat
           )}
           {isNotifiable && (
             <button
-              onClick={() => onToggle(benefit.id, completed)}
+              onClick={() => onToggle(benefit.id, completed, userCardId)}
               className={`btn ${completed ? 'btn-secondary' : 'btn-success'}`}
               style={{ padding: '0.4rem 0.75rem', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
             >

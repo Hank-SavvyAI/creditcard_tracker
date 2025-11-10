@@ -213,11 +213,11 @@ export default function AdminPage() {
                 >
                   銀行 {sortBy === 'bank' && (sortOrder === 'asc' ? '↑' : '↓')}
                 </th>
-                <th>地區</th>
-                <th>類型</th>
-                <th>福利數量</th>
-                <th>狀態</th>
-                <th>操作</th>
+                <th style={{ whiteSpace: 'nowrap' }}>地區</th>
+                <th style={{ whiteSpace: 'nowrap' }}>類型</th>
+                <th style={{ whiteSpace: 'nowrap' }}>福利數量</th>
+                <th style={{ whiteSpace: 'nowrap' }}>狀態</th>
+                <th style={{ whiteSpace: 'nowrap' }}>操作</th>
               </tr>
             </thead>
             <tbody>
@@ -225,8 +225,8 @@ export default function AdminPage() {
                 <tr key={card.id}>
                   <td>{card.id}</td>
                   <td>{card.name}</td>
-                  <td>{card.bank}</td>
-                  <td>
+                  <td style={{ whiteSpace: 'nowrap' }}>{card.bank}</td>
+                  <td style={{ whiteSpace: 'nowrap' }}>
                     {card.region === 'taiwan' && '🇹🇼 台灣'}
                     {card.region === 'america' && '🇺🇸 美國'}
                     {card.region === 'canada' && '🇨🇦 加拿大'}
@@ -234,7 +234,7 @@ export default function AdminPage() {
                     {card.region === 'singapore' && '🇸🇬 新加坡'}
                     {card.region === 'other' && '🌏 其他'}
                   </td>
-                  <td>
+                  <td style={{ whiteSpace: 'nowrap' }}>
                     <span style={{
                       padding: '0.25rem 0.5rem',
                       borderRadius: '4px',
@@ -246,13 +246,13 @@ export default function AdminPage() {
                       {card.type === 'business' ? '🏢 商業卡' : '💳 個人卡'}
                     </span>
                   </td>
-                  <td>{card.benefits?.length || 0} 項</td>
-                  <td>
+                  <td style={{ whiteSpace: 'nowrap' }}>{card.benefits?.length || 0} 項</td>
+                  <td style={{ whiteSpace: 'nowrap' }}>
                     <span className={`status-badge ${card.isActive ? 'active' : 'inactive'}`}>
                       {card.isActive ? '啟用' : '停用'}
                     </span>
                   </td>
-                  <td>
+                  <td style={{ whiteSpace: 'nowrap' }}>
                     <div className="action-buttons">
                       <Link
                         href={`/admin/cards/${card.id}`}

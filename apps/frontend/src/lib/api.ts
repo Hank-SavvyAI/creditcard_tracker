@@ -87,24 +87,24 @@ export class ApiClient {
     return this.request(`/api/benefits/my${query}`);
   }
 
-  async completeBenefit(benefitId: number, year?: number, notes?: string) {
+  async completeBenefit(benefitId: number, year?: number, notes?: string, userCardId?: number) {
     return this.request(`/api/benefits/${benefitId}/complete`, {
       method: 'POST',
-      body: JSON.stringify({ year, notes }),
+      body: JSON.stringify({ year, notes, userCardId }),
     });
   }
 
-  async uncompleteBenefit(benefitId: number, year?: number) {
+  async uncompleteBenefit(benefitId: number, year?: number, userCardId?: number) {
     return this.request(`/api/benefits/${benefitId}/uncomplete`, {
       method: 'POST',
-      body: JSON.stringify({ year }),
+      body: JSON.stringify({ year, userCardId }),
     });
   }
 
-  async updateBenefitSettings(benefitId: number, year: number, settings: { reminderDays?: number; notificationEnabled?: boolean }) {
+  async updateBenefitSettings(benefitId: number, year: number, settings: { reminderDays?: number; notificationEnabled?: boolean }, userCardId?: number) {
     return this.request(`/api/benefits/${benefitId}/settings`, {
       method: 'PATCH',
-      body: JSON.stringify({ year, ...settings }),
+      body: JSON.stringify({ year, ...settings, userCardId }),
     });
   }
 
