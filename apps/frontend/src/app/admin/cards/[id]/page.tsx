@@ -273,9 +273,20 @@ export default function EditCardPage() {
                       padding: '0.5rem'
                     }}
                     onError={(e) => {
-                      e.currentTarget.style.display = 'none'
+                      console.error('圖片載入失敗:', formData.photo);
+                      e.currentTarget.style.border = '2px solid red';
+                      e.currentTarget.alt = '⚠️ 圖片載入失敗 - 請檢查 URL 是否正確';
+                    }}
+                    onLoad={() => {
+                      console.log('圖片載入成功:', formData.photo);
                     }}
                   />
+                  <div style={{ fontSize: '0.85rem', color: '#666', marginTop: '0.5rem' }}>
+                    <strong>圖片 URL:</strong> {formData.photo}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: '#999', marginTop: '0.25rem' }}>
+                    💡 Cloudflare 圖片 URL 格式: https://imagedelivery.net/[account-hash]/[image-id]/public
+                  </div>
                 </div>
               )}
             </div>

@@ -75,7 +75,7 @@ export default function Dashboard() {
     }
   }
 
-  async function removeCard(cardId: number, cardName: string) {
+  async function removeCard(userCardId: number, cardName: string) {
     const confirmMessage = language === 'zh-TW'
       ? `確定要移除「${cardName}」的追蹤嗎？`
       : `Are you sure you want to stop tracking "${cardName}"?`
@@ -85,7 +85,7 @@ export default function Dashboard() {
     }
 
     try {
-      await api.removeCard(cardId)
+      await api.removeCard(userCardId)
       alert(language === 'zh-TW' ? '已移除追蹤' : 'Card removed successfully')
       await loadData()
     } catch (error) {
@@ -112,7 +112,7 @@ export default function Dashboard() {
     if (!selectedCard) return
 
     try {
-      await api.updateCardSettings(selectedCard.card.id, {
+      await api.updateCardSettings(selectedCard.id, {
         afChargeMonth: afChargeMonth === '' ? null : afChargeMonth,
         afChargeDay: afChargeDay === '' ? null : afChargeDay,
       })
@@ -211,6 +211,13 @@ export default function Dashboard() {
                       aspectRatio: '1.586',
                       objectFit: 'cover'
                     }}
+                    onError={(e) => {
+                      console.error('卡片圖片載入失敗:', userCard.card.photo);
+                      e.currentTarget.style.display = 'none';
+                    }}
+                    onLoad={() => {
+                      console.log('卡片圖片載入成功:', userCard.card.photo);
+                    }}
                   />
                 </div>
               )}
@@ -261,7 +268,7 @@ export default function Dashboard() {
                       ⚙️ {language === 'zh-TW' ? '設定' : 'Settings'}
                     </button>
                     <button
-                      onClick={() => removeCard(userCard.card.id, language === 'zh-TW' ? userCard.card.name : (userCard.card.nameEn || userCard.card.name))}
+                      onClick={() => removeCard(userCard.id, language === 'zh-TW' ? userCard.card.name : (userCard.card.nameEn || userCard.card.name))}
                       className="btn btn-danger"
                       style={{
                         padding: '0.5rem 1rem',
@@ -314,20 +321,23 @@ export default function Dashboard() {
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1000,
-          padding: '1rem'
+          padding: '1rem',
+          overflowY: 'auto'
         }}>
           <div style={{
-            backgroundColor: 'var(--card-bg)',
+            backgroundColor: '#ffffff',
             borderRadius: '12px',
             padding: '2rem',
             maxWidth: '500px',
             width: '100%',
-            boxShadow: '0 10px 40px rgba(0,0,0,0.3)'
+            boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+            maxHeight: '90vh',
+            overflowY: 'auto'
           }}>
             <h2 style={{ marginBottom: '1rem', color: 'var(--primary-color)' }}>
               {language === 'zh-TW' ? '信用卡設定' : 'Card Settings'}

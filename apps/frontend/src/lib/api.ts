@@ -68,14 +68,14 @@ export class ApiClient {
     });
   }
 
-  async removeCard(cardId: number) {
-    return this.request(`/api/cards/my/${cardId}`, {
+  async removeCard(userCardId: number) {
+    return this.request(`/api/cards/my/${userCardId}`, {
       method: 'DELETE',
     });
   }
 
-  async updateCardSettings(cardId: number, settings: { nickname?: string; afChargeMonth?: number | null; afChargeDay?: number | null }) {
-    return this.request(`/api/cards/my/${cardId}`, {
+  async updateCardSettings(userCardId: number, settings: { nickname?: string; afChargeMonth?: number | null; afChargeDay?: number | null }) {
+    return this.request(`/api/cards/my/${userCardId}`, {
       method: 'PATCH',
       body: JSON.stringify(settings),
     });

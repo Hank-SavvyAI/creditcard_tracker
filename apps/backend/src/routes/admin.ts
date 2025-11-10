@@ -9,6 +9,34 @@ const router = Router();
 // All admin routes require authentication and admin role
 router.use(authenticate as RequestHandler, isAdmin as RequestHandler);
 
+// Get all unique benefit categories
+router.get('/benefit-categories', async (req: AuthRequest, res) => {
+  try {
+    // Get all benefits with their categories
+    const benefits = await prisma.benefit.findMany({
+      select: {
+        category: true,
+        categoryEn: true,
+      },
+      distinct: ['category'],
+      orderBy: {
+        category: 'asc',
+      },
+    });
+
+    // Extract unique categories
+    const categories = benefits.map(b => ({
+      zh: b.category,
+      en: b.categoryEn || b.category,
+    }));
+
+    res.json(categories);
+  } catch (error) {
+    console.error('Failed to fetch benefit categories:', error);
+    res.status(500).json({ error: 'Failed to fetch benefit categories' });
+  }
+});
+
 // Create new credit card
 router.post('/cards', async (req: AuthRequest, res) => {
   try {

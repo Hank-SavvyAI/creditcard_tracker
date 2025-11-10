@@ -127,6 +127,7 @@ export async function archiveExpiredBenefits() {
         const history = await tx.userBenefitHistory.create({
           data: {
             userId: benefit.userId,
+            userCardId: benefit.userCardId,
             benefitId: benefit.benefitId,
             year: benefit.year,
             cycleNumber: benefit.cycleNumber,

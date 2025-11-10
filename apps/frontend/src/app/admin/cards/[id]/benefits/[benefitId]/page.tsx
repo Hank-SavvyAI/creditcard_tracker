@@ -16,6 +16,7 @@ export default function EditBenefitPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [benefit, setBenefit] = useState<any>(null)
+  const [categories, setCategories] = useState<Array<{ zh: string; en: string }>>([])
   const [formData, setFormData] = useState({
     category: '',
     categoryEn: '',
@@ -46,7 +47,25 @@ export default function EditBenefitPage() {
     }
 
     loadBenefit()
+    loadCategories()
   }, [router, benefitId])
+
+  async function loadCategories() {
+    try {
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/benefit-categories`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setCategories(data)
+      }
+    } catch (error) {
+      console.error('Failed to load categories:', error)
+    }
+  }
 
   async function loadBenefit() {
     try {
@@ -92,6 +111,20 @@ export default function EditBenefitPage() {
     setFormData({
       ...formData,
       [name]: type === 'checkbox' ? checked : value,
+    })
+  }
+
+  function handleCategoryChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const value = e.target.value
+
+    // Check if selected value matches an existing category
+    const matchedCategory = categories.find(cat => cat.zh === value)
+
+    setFormData({
+      ...formData,
+      category: value,
+      // Auto-fill English category if matched
+      categoryEn: matchedCategory ? matchedCategory.en : formData.categoryEn,
     })
   }
 
@@ -159,11 +192,22 @@ export default function EditBenefitPage() {
               <input
                 type="text"
                 name="category"
+                list="category-suggestions"
                 value={formData.category}
-                onChange={handleChange}
+                onChange={handleCategoryChange}
                 required
-                placeholder="例：現金回饋"
+                placeholder="例：現金回饋（可選擇或手動輸入）"
               />
+              <datalist id="category-suggestions">
+                {categories.map((cat, index) => (
+                  <option key={index} value={cat.zh} />
+                ))}
+              </datalist>
+              {categories.length > 0 && (
+                <small style={{ color: '#666' }}>
+                  💡 已有 {categories.length} 個類別可供選擇，或輸入新類別
+                </small>
+              )}
             </div>
 
             <div className="form-group">
@@ -175,6 +219,11 @@ export default function EditBenefitPage() {
                 onChange={handleChange}
                 placeholder="Cash Back"
               />
+              {formData.category && categories.find(cat => cat.zh === formData.category) && (
+                <small style={{ color: '#10b981' }}>
+                  ✓ 已自動填入對應的英文類別
+                </small>
+              )}
             </div>
 
             <div className="form-group">

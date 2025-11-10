@@ -145,7 +145,13 @@ export default function CardsPage() {
 
   // 獲取所有銀行列表（從當前地區的卡片中）
   const banksInRegion = selectedRegion
-    ? Array.from(new Set(cards.filter(card => card.region === selectedRegion).map(card => card.bank)))
+    ? Array.from(
+        new Map(
+          cards
+            .filter(card => card.region === selectedRegion)
+            .map(card => [card.bank, { zh: card.bank, en: card.bankEn || card.bank }])
+        ).values()
+      )
     : []
 
   // 過濾邏輯：地區 + 關鍵字 + 銀行 + 類型
@@ -303,9 +309,18 @@ export default function CardsPage() {
                   }}
                 >
                   <option value="">{language === 'zh-TW' ? '全部銀行' : 'All Banks'}</option>
-                  {banksInRegion.sort().map(bank => (
-                    <option key={bank} value={bank}>{bank}</option>
-                  ))}
+                  {
+                  [...banksInRegion]
+                    .sort((a, b) => {
+                      const nameA = language === 'zh-TW' ? a.zh : a.en
+                      const nameB = language === 'zh-TW' ? b.zh : b.en
+                      return nameA.localeCompare(nameB)
+                    })
+                    .map((bank) => (
+                      <option key={bank.zh} value={bank.zh}>
+                        {language === 'zh-TW' ? bank.zh : bank.en}
+                      </option>
+                    ))}
                 </select>
               </div>
 
@@ -361,7 +376,11 @@ export default function CardsPage() {
               <div style={{ marginTop: '1rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
                 {language === 'zh-TW' ? '找到' : 'Found'} <strong>{filteredCards.length}</strong> {language === 'zh-TW' ? '張信用卡' : 'card(s)'}
                 {searchKeyword && ` ${language === 'zh-TW' ? '包含' : 'containing'} "${searchKeyword}"`}
-                {selectedBank && ` ${language === 'zh-TW' ? '來自' : 'from'} ${selectedBank}`}
+                {selectedBank && (() => {
+                  const bank = banksInRegion.find(b => b.zh === selectedBank)
+                  const bankName = bank ? (language === 'zh-TW' ? bank.zh : bank.en) : selectedBank
+                  return ` ${language === 'zh-TW' ? '來自' : 'from'} ${bankName}`
+                })()}
                 {selectedType && ` ${language === 'zh-TW' ? '類型' : 'type'}: ${selectedType === 'personal' ? (language === 'zh-TW' ? '個人卡' : 'Personal') : (language === 'zh-TW' ? '商業卡' : 'Business')}`}
               </div>
             )}

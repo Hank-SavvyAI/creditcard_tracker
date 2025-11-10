@@ -21,7 +21,7 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
   // Skip authentication in development if SKIP_AUTH is true
   if (process.env.SKIP_AUTH === 'true') {
     req.user = {
-      id: 1,
+      id: 3,
       telegramId: 'dev_user',
       tier: 'VIP',
       role: 'ADMIN',

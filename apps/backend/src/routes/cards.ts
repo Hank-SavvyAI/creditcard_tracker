@@ -119,8 +119,14 @@ router.post('/my', authenticate, async (req: AuthRequest, res) => {
     });
 
     // Create UserBenefit records for active benefits on this card
-    const { createCurrentCycleBenefits } = await import('../services/archive');
-    await createCurrentCycleBenefits(req.user!.id, userCard.id, benefitStartDates || {});
+    try {
+      const { createCurrentCycleBenefits } = await import('../services/archive');
+      await createCurrentCycleBenefits(req.user!.id, userCard.id, benefitStartDates || {});
+    } catch (benefitError) {
+      console.error('Warning: Failed to create benefits for new card, but card was added successfully:', benefitError);
+      // Card is already added, so we return success
+      // Benefits can be created later automatically
+    }
 
     res.json(userCard);
   } catch (error) {
@@ -130,10 +136,10 @@ router.post('/my', authenticate, async (req: AuthRequest, res) => {
 });
 
 // Update user card settings
-router.patch('/my/:cardId', authenticate, async (req: AuthRequest, res) => {
+router.patch('/my/:userCardId', authenticate, async (req: AuthRequest, res) => {
   try {
     const { nickname, afChargeMonth, afChargeDay } = req.body;
-    const cardId = parseInt(req.params.cardId);
+    const userCardId = parseInt(req.params.userCardId);
 
     // Validate afChargeMonth and afChargeDay if provided
     if (afChargeMonth !== undefined && afChargeMonth !== null && (afChargeMonth < 1 || afChargeMonth > 12)) {
@@ -143,12 +149,18 @@ router.patch('/my/:cardId', authenticate, async (req: AuthRequest, res) => {
       return res.status(400).json({ error: 'Invalid day (must be 1-31)' });
     }
 
+    // First verify the UserCard belongs to this user
+    const existingCard = await prisma.userCard.findUnique({
+      where: { id: userCardId },
+    });
+
+    if (!existingCard || existingCard.userId !== req.user!.id) {
+      return res.status(404).json({ error: 'Card not found' });
+    }
+
     const userCard = await prisma.userCard.update({
       where: {
-        userId_cardId: {
-          userId: req.user!.id,
-          cardId,
-        },
+        id: userCardId,
       },
       data: {
         nickname,
@@ -162,23 +174,33 @@ router.patch('/my/:cardId', authenticate, async (req: AuthRequest, res) => {
 
     res.json(userCard);
   } catch (error) {
+    console.error('Failed to update card settings:', error);
     res.status(500).json({ error: 'Failed to update card settings' });
   }
 });
 
 // Remove card from user
-router.delete('/my/:cardId', authenticate, async (req: AuthRequest, res) => {
+router.delete('/my/:userCardId', authenticate, async (req: AuthRequest, res) => {
   try {
+    const userCardId = parseInt(req.params.userCardId);
+
+    // First verify the UserCard belongs to this user
+    const existingCard = await prisma.userCard.findUnique({
+      where: { id: userCardId },
+    });
+
+    if (!existingCard || existingCard.userId !== req.user!.id) {
+      return res.status(404).json({ error: 'Card not found' });
+    }
+
     await prisma.userCard.delete({
       where: {
-        userId_cardId: {
-          userId: req.user!.id,
-          cardId: parseInt(req.params.cardId),
-        },
+        id: userCardId,
       },
     });
     res.json({ success: true });
   } catch (error) {
+    console.error('Failed to remove card:', error);
     res.status(500).json({ error: 'Failed to remove card' });
   }
 });
