@@ -1,0 +1,44 @@
+{
+  "name": "creditcard-tracker-mobile",
+  "version": "1.0.0",
+  "description": "Credit Card Tracker Mobile App (iOS/Android)",
+  "main": "index.js",
+  "scripts": {
+    "dev": "next dev -p 9001",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "cap:init": "cap init",
+    "cap:add:ios": "cap add ios",
+    "cap:add:android": "cap add android",
+    "cap:sync": "cap sync",
+    "cap:open:ios": "cap open ios",
+    "cap:open:android": "cap open android",
+    "ios:build": "npm run build && cap sync ios && cap open ios",
+    "android:build": "npm run build && cap sync android && cap open android"
+  },
+  "keywords": ["mobile", "ios", "android", "capacitor", "credit-card"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "next": "^14.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "@capacitor/core": "^5.5.1",
+    "@capacitor/cli": "^5.5.1",
+    "@capacitor/ios": "^5.5.1",
+    "@capacitor/android": "^5.5.1",
+    "@capacitor/app": "^5.0.6",
+    "@capacitor/haptics": "^5.0.6",
+    "@capacitor/keyboard": "^5.0.6",
+    "@capacitor/status-bar": "^5.0.6",
+    "@capacitor/push-notifications": "^5.1.0",
+    "@capacitor/splash-screen": "^5.0.6"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "typescript": "^5.0.0"
+  }
+}
