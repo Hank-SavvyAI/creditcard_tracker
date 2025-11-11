@@ -1,0 +1,25 @@
+version: "3.8"
+services:
+  postgres:
+    build: .
+    image: supabase_local_pg:17
+    container_name: supabase_local_pg17
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: localpassword
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - supabase_pgdata:/var/lib/postgresql/data
+      # optional: 把 host 的 backups 目錄 mount 到 container（方便直接在 container 裡找到備份檔）
+      - ./backups:/backups
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  supabase_pgdata:
