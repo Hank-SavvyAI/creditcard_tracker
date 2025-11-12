@@ -19,6 +19,28 @@ function calculateCycleNumber(date: Date, frequency: string): number | null {
   return null;
 }
 
+// Helper function to calculate period end date for a given date and frequency
+function calculatePeriodEnd(date: Date, frequency: string, cycleNumber: number): Date | null {
+  const year = date.getFullYear();
+
+  if (frequency === 'MONTHLY') {
+    // End of the month
+    return new Date(year, cycleNumber, 0, 23, 59, 59, 999);
+  } else if (frequency === 'QUARTERLY') {
+    // End of the quarter (Q1:3/31, Q2:6/30, Q3:9/30, Q4:12/31)
+    const quarterEndMonth = cycleNumber * 3;
+    return new Date(year, quarterEndMonth, 0, 23, 59, 59, 999);
+  } else if (frequency === 'SEMI_ANNUAL') {
+    // End of half year (H1:6/30, H2:12/31)
+    const halfYearEndMonth = cycleNumber * 6;
+    return new Date(year, halfYearEndMonth, 0, 23, 59, 59, 999);
+  } else if (frequency === 'YEARLY') {
+    // End of year
+    return new Date(year, 12, 0, 23, 59, 59, 999);
+  }
+  return null;
+}
+
 // Helper function to find or create UserBenefit
 async function findOrCreateUserBenefit(
   userId: number,
@@ -286,7 +308,122 @@ router.post('/:benefitId/usage', authenticate, async (req: AuthRequest, res) => 
     const usageDate = usedAt ? new Date(usedAt) : new Date();
     const currentYear = year || usageDate.getFullYear();
 
-    // Get or create UserBenefit with cycleNumber based on usedAt
+    // Get benefit to check frequency and calculate period
+    const benefit = await prisma.benefit.findUnique({
+      where: { id: parseInt(benefitId) },
+      include: { card: true },
+    });
+
+    if (!benefit) {
+      return res.status(404).json({ error: 'Benefit not found' });
+    }
+
+    // Calculate cycle number and period end for the usage date
+    const cycleNumber = calculateCycleNumber(usageDate, benefit.frequency);
+    const periodEnd = cycleNumber ? calculatePeriodEnd(usageDate, benefit.frequency, cycleNumber) : null;
+    const now = new Date();
+    const isPeriodExpired = periodEnd && now > periodEnd;
+
+    console.log(`Adding usage for ${benefit.title}:`);
+    console.log(`- Usage date: ${usageDate.toLocaleDateString()}`);
+    console.log(`- Cycle number: ${cycleNumber}`);
+    console.log(`- Period end: ${periodEnd?.toLocaleDateString()}`);
+    console.log(`- Is expired: ${isPeriodExpired}`);
+
+    if (isPeriodExpired) {
+      // Period is expired - create directly in history
+      console.log('⚠️  Period is expired, creating in UserBenefitHistory...');
+
+      // Find userCard
+      let targetUserCardId = userCardId;
+      if (!targetUserCardId) {
+        const userCards = await prisma.userCard.findMany({
+          where: {
+            userId: req.user!.id,
+            cardId: benefit.cardId,
+          },
+        });
+
+        if (userCards.length === 0) {
+          return res.status(400).json({ error: 'User does not have this card' });
+        }
+
+        if (userCards.length > 1) {
+          return res.status(400).json({ error: 'Multiple cards found. Please specify userCardId' });
+        }
+
+        targetUserCardId = userCards[0].id;
+      }
+
+      // Check if history record already exists
+      let historyRecord = await prisma.userBenefitHistory.findFirst({
+        where: {
+          userId: req.user!.id,
+          userCardId: targetUserCardId,
+          benefitId: parseInt(benefitId),
+          year: currentYear,
+          cycleNumber: cycleNumber || undefined,
+        },
+      });
+
+      // Create history record if not exists
+      if (!historyRecord) {
+        const now = new Date();
+        historyRecord = await prisma.userBenefitHistory.create({
+          data: {
+            userId: req.user!.id,
+            userCardId: targetUserCardId,
+            benefitId: parseInt(benefitId),
+            year: currentYear,
+            cycleNumber,
+            periodEnd,
+            isCompleted: false,
+            usedAmount: 0,
+            notificationEnabled: false,
+            createdAt: now,
+            updatedAt: now,
+          },
+        });
+      }
+
+      // Create usage record in history
+      const usage = await prisma.benefitUsageHistory.create({
+        data: {
+          historyId: historyRecord.id,
+          amount: parseFloat(amount),
+          usedAt: usageDate,
+          note,
+          createdAt: usageDate,
+          updatedAt: usageDate,
+        },
+      });
+
+      // Update usedAmount in history
+      const updatedHistory = await prisma.userBenefitHistory.update({
+        where: { id: historyRecord.id },
+        data: {
+          usedAmount: {
+            increment: parseFloat(amount),
+          },
+        },
+        include: {
+          usages: {
+            orderBy: { usedAt: 'desc' },
+          },
+          benefit: true,
+        },
+      });
+
+      console.log(`✅ Added to history: ${updatedHistory.id}`);
+
+      return res.json({
+        ...updatedHistory,
+        isHistorical: true,
+        message: '此報銷記錄已添加到歷史記錄（該週期已過期）',
+      });
+    }
+
+    // Period is not expired - use normal flow
     const userBenefit = await findOrCreateUserBenefit(
       req.user!.id,
       parseInt(benefitId),
@@ -336,6 +473,19 @@ router.get('/:benefitId/usage', authenticate, async (req: AuthRequest, res) => {
     const year = parseInt(req.query.year as string) || new Date().getFullYear();
     const userCardId = req.query.userCardId ? parseInt(req.query.userCardId as string) : undefined;
 
+    // Get benefit to check frequency
+    const benefit = await prisma.benefit.findUnique({
+      where: { id: parseInt(benefitId) },
+    });
+
+    if (!benefit) {
+      return res.status(404).json({ error: 'Benefit not found' });
+    }
+
+    // Calculate current cycle number based on today's date
+    const now = new Date();
+    const currentCycleNumber = calculateCycleNumber(now, benefit.frequency);
+
     const where: any = {
       userId: req.user!.id,
       benefitId: parseInt(benefitId),
@@ -344,6 +494,11 @@ router.get('/:benefitId/usage', authenticate, async (req: AuthRequest, res) => {
 
     if (userCardId) {
       where.userCardId = userCardId;
+    }
+
+    // Filter by current cycle number if benefit has frequency
+    if (currentCycleNumber !== null) {
+      where.cycleNumber = currentCycleNumber;
     }
 
     const userBenefit = await prisma.userBenefit.findFirst({
