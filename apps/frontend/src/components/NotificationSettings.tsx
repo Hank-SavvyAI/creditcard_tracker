@@ -136,7 +136,7 @@ export default function NotificationSettings({ language }: NotificationSettingsP
 
   if (notificationSupported === false) {
     return (
-      <div style={{ padding: '1rem', background: '#FEF3C7', borderRadius: '8px', marginBottom: '1rem' }}>
+      <div className="notification-warning-card" style={{ padding: '1rem', background: '#FEF3C7', borderRadius: '8px', marginBottom: '1rem' }}>
         <p style={{ margin: 0, color: '#92400E', fontWeight: 'bold' }}>
           {language === 'zh-TW'
             ? '⚠️ 您的瀏覽器不支援通知功能'
