@@ -96,17 +96,39 @@ export default function Header() {
         justifyContent: 'space-between',
         alignItems: 'center',
       }}>
-        {/* Left Side: Title + Navigation Links */}
-        <div className="header-left" style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+        {/* Left Side: Logo + Title + Navigation Links */}
+        <div className="header-left" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+          {/* SavvyAI Logo */}
+          <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
+            <img
+              src="/images/savvyai-logo.png"
+              alt="SavvyAI Logo"
+              style={{
+                height: '50px',
+                width: '100px',
+                objectFit: 'contain',
+              }}
+              onError={(e) => {
+                // Fallback to text if image fails to load
+                e.currentTarget.style.display = 'none';
+              }}
+            />
+          </Link>
+
+          {/* Title */}
           <Link href="/" style={{ textDecoration: 'none' }}>
             <h1 style={{
               margin: 0,
               fontSize: '1.5rem',
               fontWeight: 'bold',
               color: 'var(--primary-color)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
             }}>
-              <span className="header-title-full">💳 {language === 'zh-TW' ? '信用卡福利追蹤' : 'Credit Card Tracker'}</span>
-              <span className="header-title-short">💳 {language === 'zh-TW' ? '福利追蹤' : 'Tracker'}</span>
+              <span className="header-icon">💳</span>
+              <span className="header-title-full">{language === 'zh-TW' ? '信用卡福利追蹤' : 'Credit Card Tracker'}</span>
+              <span className="header-title-short">{language === 'zh-TW' ? '福利追蹤' : 'Tracker'}</span>
             </h1>
           </Link>
 
@@ -137,31 +159,6 @@ export default function Header() {
             )}
           </nav>
         </div>
-
-        {/* Center: Logo */}
-        <Link href="/" className="header-center-logo" style={{
-          textDecoration: 'none',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          position: 'absolute',
-          left: '50%',
-          transform: 'translateX(-50%)',
-        }}>
-          <img
-            src="/images/savvyai-logo.png"
-            alt="SavvyAI Logo"
-            style={{
-              height: '50px',
-              width: '100px',
-              objectFit: 'contain',
-            }}
-            onError={(e) => {
-              // Fallback to text if image fails to load
-              e.currentTarget.style.display = 'none';
-            }}
-          />
-        </Link>
 
         {/* Right Side: Language Switcher + User Info */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>

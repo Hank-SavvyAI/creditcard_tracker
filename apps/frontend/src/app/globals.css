@@ -1411,49 +1411,27 @@ body {
   }
 }
 
-/* Header responsive - Logo positioning */
+/* Header responsive - Simplified */
 @media (max-width: 768px) {
-  .header-center-logo {
-    position: static !important;
-    transform: none !important;
-    left: auto !important;
-    order: 3 !important;
-    margin-left: auto !important;
+  /* Show only credit card emoji on mobile, hide text */
+  .header-icon {
+    display: inline-block !important;
+    font-size: 1.5rem !important;
   }
 
-  .header-center-logo img {
+  .header-title-full,
+  .header-title-short {
+    display: none !important;
+  }
+
+  /* Smaller logo on mobile */
+  .header-left img {
     height: 40px !important;
     width: 80px !important;
   }
 
-  header > div {
-    flex-wrap: wrap !important;
-  }
-
+  /* Adjust spacing */
   .header-left {
-    order: 1 !important;
-    flex: 1 !important;
-    min-width: 0 !important;
-  }
-
-  header > div > div:last-child {
-    order: 2 !important;
-  }
-
-  /* Show only credit card emoji on mobile, hide text */
-  .header-left h1 {
-    display: block !important;
-  }
-
-  .header-left h1 span {
-    font-size: 0 !important;
-  }
-
-  .header-left h1 span::first-letter {
-    font-size: 1.5rem !important;
-  }
-
-  .header-left nav {
-    margin-left: 0 !important;
+    gap: 1rem !important;
   }
 }
