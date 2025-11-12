@@ -89,16 +89,24 @@ export default function BenefitItem({ benefit, userCardId, language, year, onTog
 
       if (response.ok) {
         const data = await response.json()
-        if( !data.isHistorical) {
+        if (data.isHistorical) {
+          // Added to history - show message and close form
+          alert(data.message || (language === 'zh-TW'
+            ? '此報銷記錄已添加到歷史記錄（該週期已過期）'
+            : 'This reimbursement has been added to history (cycle expired)'))
+          setShowUsageForm(false)
+        } else {
+          // Added to current cycle - update display
           setUsages(data.usages || [])
           setUsedAmount(data.usedAmount || 0)
           setNewUsage({ amount: '', usedAt: getTodayDate(), note: '' })
-        }
-        setShowUsageForm(false)
-        // Auto-complete if used amount >= total amount
-        const newUsedAmount = data.usedAmount || 0
-        if (newUsedAmount >= totalAmount && !completed) {
-          onToggle(benefit.id, false, userCardId)
+          setShowUsageForm(false)
+
+          // Auto-complete if used amount >= total amount
+          const newUsedAmount = data.usedAmount || 0
+          if (newUsedAmount >= totalAmount && !completed) {
+            onToggle(benefit.id, false, userCardId)
+          }
         }
       } else {
         alert(language === 'zh-TW' ? '新增失敗' : 'Failed to add usage')

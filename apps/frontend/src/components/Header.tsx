@@ -96,7 +96,7 @@ export default function Header() {
         justifyContent: 'space-between',
         alignItems: 'center',
       }}>
-        {/* Logo / Title */}
+        {/* Left Side: Title + Navigation Links */}
         <div className="header-left" style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
           <Link href="/" style={{ textDecoration: 'none' }}>
             <h1 style={{
@@ -137,6 +137,31 @@ export default function Header() {
             )}
           </nav>
         </div>
+
+        {/* Center: Logo */}
+        <Link href="/" style={{
+          textDecoration: 'none',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'absolute',
+          left: '50%',
+          transform: 'translateX(-50%)',
+        }}>
+          <img
+            src="/images/savvyai-logo.png"
+            alt="SavvyAI Logo"
+            style={{
+              height: '50px',
+              width: '100px',
+              objectFit: 'contain',
+            }}
+            onError={(e) => {
+              // Fallback to text if image fails to load
+              e.currentTarget.style.display = 'none';
+            }}
+          />
+        </Link>
 
         {/* Right Side: Language Switcher + User Info */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
