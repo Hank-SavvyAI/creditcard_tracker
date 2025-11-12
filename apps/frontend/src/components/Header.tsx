@@ -60,7 +60,17 @@ export default function Header() {
   }
 
   const handleLogin = () => {
-    router.push('/auth/telegram')
+    // Navigate to home page login section
+    if (pathname === '/') {
+      // If already on home page, scroll to login section
+      const loginSection = document.querySelector('.login-methods')
+      if (loginSection) {
+        loginSection.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+    } else {
+      // Navigate to home page
+      router.push('/')
+    }
   }
 
   // Don't show header on auth pages
@@ -95,7 +105,8 @@ export default function Header() {
               fontWeight: 'bold',
               color: 'var(--primary-color)',
             }}>
-              💳 {language === 'zh-TW' ? '信用卡福利追蹤' : 'Credit Card Tracker'}
+              <span className="header-title-full">💳 {language === 'zh-TW' ? '信用卡福利追蹤' : 'Credit Card Tracker'}</span>
+              <span className="header-title-short">💳 {language === 'zh-TW' ? '福利追蹤' : 'Tracker'}</span>
             </h1>
           </Link>
 

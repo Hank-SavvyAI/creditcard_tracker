@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import LanguageSwitcher from '@/components/LanguageSwitcher'
 import { useLanguageStore, t } from '@/store/language'
 import { api } from '@/lib/api'
 
@@ -62,10 +61,6 @@ export default function Home() {
 
   return (
     <div className="home-container">
-      <div style={{ position: 'absolute', top: '20px', right: '20px' }}>
-        <LanguageSwitcher />
-      </div>
-
       <h1>{t('home.title', language)}</h1>
       <h2>{t('home.title.en', language)}</h2>
 
