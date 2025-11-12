@@ -1413,14 +1413,8 @@ body {
 
 /* Header responsive - Simplified */
 @media (max-width: 768px) {
-  /* Show only credit card emoji on mobile, hide text */
-  .header-icon {
-    display: inline-block !important;
-    font-size: 1.5rem !important;
-  }
-
-  .header-title-full,
-  .header-title-short {
+  /* Hide entire title (including emoji) on mobile */
+  .header-left h1 {
     display: none !important;
   }
 
