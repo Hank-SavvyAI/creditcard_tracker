@@ -147,7 +147,7 @@ export const translations = {
     'home.feature.multilang': 'Multi-language support (TC/EN)',
     'home.feature.telegram': 'Telegram Bot integration',
     'home.howto': 'How to get started?',
-    'home.step1': 'Login with your Telegram account',
+    'home.step1': 'Login with your Telegram/Gmail/Line account',
     'home.step2': 'Add your credit cards',
     'home.step3': 'View benefits for each card',
     'home.step4': 'Mark as complete, no more reminders',
