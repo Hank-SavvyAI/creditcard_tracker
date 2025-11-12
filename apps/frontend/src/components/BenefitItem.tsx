@@ -89,11 +89,12 @@ export default function BenefitItem({ benefit, userCardId, language, year, onTog
 
       if (response.ok) {
         const data = await response.json()
-        setUsages(data.usages || [])
-        setUsedAmount(data.usedAmount || 0)
-        setNewUsage({ amount: '', usedAt: getTodayDate(), note: '' })
+        if( !data.isHistorical) {
+          setUsages(data.usages || [])
+          setUsedAmount(data.usedAmount || 0)
+          setNewUsage({ amount: '', usedAt: getTodayDate(), note: '' })
+        }
         setShowUsageForm(false)
-
         // Auto-complete if used amount >= total amount
         const newUsedAmount = data.usedAmount || 0
         if (newUsedAmount >= totalAmount && !completed) {
