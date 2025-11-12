@@ -60,7 +60,7 @@ export const translations = {
     'home.feature.multilang': '多語言支援（繁中/英文）',
     'home.feature.telegram': 'Telegram Bot 整合',
     'home.howto': '如何開始使用？',
-    'home.step1': '使用 Telegram 帳號登入',
+    'home.step1': '使用 Telegram/Gmail/Line 帳號登入',
     'home.step2': '新增您擁有的信用卡',
     'home.step3': '查看每張卡的福利項目',
     'home.step4': '使用福利後勾選完成，系統不再提醒',

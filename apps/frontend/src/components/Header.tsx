@@ -139,7 +139,7 @@ export default function Header() {
         </div>
 
         {/* Center: Logo */}
-        <Link href="/" style={{
+        <Link href="/" className="header-center-logo" style={{
           textDecoration: 'none',
           display: 'flex',
           alignItems: 'center',
