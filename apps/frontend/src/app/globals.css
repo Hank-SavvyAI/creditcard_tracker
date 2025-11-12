@@ -1434,20 +1434,20 @@ body {
     display: none !important;
   }
 
-  /* Match font size of language switcher and login button with navigation links */
+  /* Smaller font size for all header buttons and language switcher on mobile */
   .language-switcher .lang-btn {
-    font-size: 0.875rem !important;
+    font-size: 0.8rem !important;
     padding: 0.4rem 0.6rem !important;
   }
 
   header button {
-    font-size: 1rem !important;
-    padding: 0.5rem 1rem !important;
+    font-size: 0.85rem !important;
+    padding: 0.5rem 0.8rem !important;
   }
 
   /* Ensure button text (including spans without inline styles) use same font size */
   header button span:not([style*="fontSize"]):not([style*="font-size"]) {
-    font-size: 1rem !important;
+    font-size: 0.85rem !important;
   }
 
   header .header-left nav a {
