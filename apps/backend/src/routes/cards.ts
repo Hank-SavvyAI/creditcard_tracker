@@ -59,6 +59,9 @@ router.get('/', async (req, res) => {
           where: { isActive: true },
         },
       },
+      orderBy: {
+        displayPriority: 'asc', // Lower number = higher priority
+      },
     });
     res.json(cards);
   } catch (error) {
@@ -78,6 +81,11 @@ router.get('/my', authenticate, async (req: AuthRequest, res) => {
               where: { isActive: true },
             },
           },
+        },
+      },
+      orderBy: {
+        card: {
+          displayPriority: 'asc', // Lower number = higher priority
         },
       },
     });

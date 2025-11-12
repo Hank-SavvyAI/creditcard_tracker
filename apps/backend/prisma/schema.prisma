@@ -49,24 +49,25 @@ model PushSubscription {
 }
 
 model CreditCard {
-  id            Int             @id @default(autoincrement())
-  name          String
-  nameEn        String?
-  bank          String
-  bankEn        String?
-  issuer        String?
-  region        String          @default("taiwan")
-  type          String          @default("personal") // "personal" | "business"
-  description   String?
-  descriptionEn String?
-  photo         String?
-  fee           String?
-  isActive      Boolean         @default(true)
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  id              Int             @id @default(autoincrement())
+  name            String
+  nameEn          String?
+  bank            String
+  bankEn          String?
+  issuer          String?
+  region          String          @default("taiwan")
+  type            String          @default("personal") // "personal" | "business"
+  description     String?
+  descriptionEn   String?
+  photo           String?
+  fee             String?
+  displayPriority Int             @default(999) // Lower number = higher priority
+  isActive        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
-  benefits      Benefit[]
-  userCards     UserCard[]
+  benefits        Benefit[]
+  userCards       UserCard[]
 }
 
 model Benefit {

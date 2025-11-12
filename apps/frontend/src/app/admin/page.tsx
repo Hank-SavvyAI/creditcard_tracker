@@ -230,6 +230,7 @@ export default function AdminPage() {
                 >
                   銀行 {sortBy === 'bank' && (sortOrder === 'asc' ? '↑' : '↓')}
                 </th>
+                <th style={{ whiteSpace: 'nowrap' }}>年費</th>
                 <th style={{ whiteSpace: 'nowrap' }}>地區</th>
                 <th style={{ whiteSpace: 'nowrap' }}>類型</th>
                 <th style={{ whiteSpace: 'nowrap' }}>福利數量</th>
@@ -243,6 +244,7 @@ export default function AdminPage() {
                   <td>{card.id}</td>
                   <td>{card.name}</td>
                   <td style={{ whiteSpace: 'nowrap' }}>{card.bank}</td>
+                  <td style={{ whiteSpace: 'nowrap' }}>{card.fee || '-'}</td>
                   <td style={{ whiteSpace: 'nowrap' }}>
                     {card.region === 'taiwan' && '🇹🇼 台灣'}
                     {card.region === 'america' && '🇺🇸 美國'}
