@@ -8,10 +8,36 @@ interface LanguageState {
   setLanguage: (lang: Language) => void
 }
 
+// 智能判斷預設語言
+const getDefaultLanguage = (): Language => {
+  // 方法1: 檢查 localStorage 是否已有用戶設定（persist 會自動處理）
+  // 方法2: 使用瀏覽器語言設定
+  if (typeof window !== 'undefined' && navigator.language) {
+    const browserLang = navigator.language.toLowerCase()
+
+    // 檢查是否為繁體中文相關語言
+    // zh-TW, zh-HK, zh-MO (台灣、香港、澳門)
+    if (browserLang.startsWith('zh-tw') ||
+        browserLang.startsWith('zh-hk') ||
+        browserLang.startsWith('zh-mo') ||
+        browserLang === 'zh-hant') {
+      return 'zh-TW'
+    }
+
+    // 其他中文（簡體）暫時也用繁體
+    if (browserLang.startsWith('zh')) {
+      return 'zh-TW'
+    }
+  }
+
+  // 預設為繁體中文
+  return 'zh-TW'
+}
+
 export const useLanguageStore = create<LanguageState>()(
   persist(
     (set) => ({
-      language: 'zh-TW',
+      language: getDefaultLanguage(), // 使用智能判斷
       setLanguage: (lang) => set({ language: lang }),
     }),
     {

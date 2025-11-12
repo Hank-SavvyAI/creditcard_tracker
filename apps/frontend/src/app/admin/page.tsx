@@ -25,6 +25,23 @@ export default function AdminPage() {
       router.push('/')
       return
     }
+
+    // Check if user is admin
+    if (!skipAuth) {
+      const storedUser = localStorage.getItem('user')
+      if (storedUser) {
+        const user = JSON.parse(storedUser)
+        if (user.role !== 'ADMIN') {
+          alert('無權限訪問管理員後台')
+          router.push('/dashboard')
+          return
+        }
+      } else {
+        router.push('/')
+        return
+      }
+    }
+
     loadCards()
   }, [router])
 

@@ -8,7 +8,7 @@ interface Card {
   id: number
   name: string
   issuer: string
-  annualFee: number
+  annualFee: string | null
   currency: string
   afChargeMonth?: number | null
   afChargeDay?: number | null
@@ -161,9 +161,9 @@ export default function SpreadsheetView() {
                 card: {
                   id: userCard.card.id,
                   name: language === 'zh-TW' ? userCard.card.name : (userCard.card.nameEn || userCard.card.name),
-                  issuer: language === 'zh-TW' ? userCard.card.issuer : (userCard.card.issuerEn || userCard.card.issuer),
-                  annualFee: userCard.card.annualFee,
-                  currency: userCard.card.currency,
+                  issuer: language === 'zh-TW' ? userCard.card.bank : (userCard.card.bankEn || userCard.card.bank),
+                  annualFee: userCard.card.fee,
+                  currency: userCard.card.currency || 'TWD',
                   afChargeMonth: userCard.afChargeMonth,
                   afChargeDay: userCard.afChargeDay,
                 },
@@ -275,9 +275,7 @@ export default function SpreadsheetView() {
                             {item.benefit.card.issuer || '-'}
                           </td>
                           <td style={{ ...rowStyle, textAlign: 'right', verticalAlign: 'top' }} rowSpan={totalCardRows}>
-                            {item.benefit.card.annualFee != null
-                              ? `${item.benefit.card.currency || ''} ${item.benefit.card.annualFee.toFixed(2)}`
-                              : '-'}
+                            {item.benefit.card.annualFee || '-'}
                           </td>
                           <td style={{ ...rowStyle, textAlign: 'center', verticalAlign: 'top' }} rowSpan={totalCardRows}>
                             {item.benefit.card.afChargeMonth && item.benefit.card.afChargeDay

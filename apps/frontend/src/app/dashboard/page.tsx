@@ -19,6 +19,7 @@ export default function Dashboard() {
   const [isInitialized, setIsInitialized] = useState(false)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [selectedCard, setSelectedCard] = useState<any>(null)
+  const [nickname, setNickname] = useState('')
   const [afChargeMonth, setAfChargeMonth] = useState<number | ''>('')
   const [afChargeDay, setAfChargeDay] = useState<number | ''>('')
   const year = new Date().getFullYear()
@@ -96,6 +97,7 @@ export default function Dashboard() {
 
   function openCardSettings(userCard: any) {
     setSelectedCard(userCard)
+    setNickname(userCard.nickname || '')
     setAfChargeMonth(userCard.afChargeMonth || '')
     setAfChargeDay(userCard.afChargeDay || '')
     setShowSettingsModal(true)
@@ -104,6 +106,7 @@ export default function Dashboard() {
   function closeCardSettings() {
     setShowSettingsModal(false)
     setSelectedCard(null)
+    setNickname('')
     setAfChargeMonth('')
     setAfChargeDay('')
   }
@@ -113,6 +116,7 @@ export default function Dashboard() {
 
     try {
       await api.updateCardSettings(selectedCard.id, {
+        nickname: nickname.trim() === '' ? undefined : nickname.trim(),
         afChargeMonth: afChargeMonth === '' ? null : afChargeMonth,
         afChargeDay: afChargeDay === '' ? null : afChargeDay,
       })
@@ -228,7 +232,11 @@ export default function Dashboard() {
                   <div>
                     <h2 className="card-title" style={{ margin: 0, marginBottom: '0.25rem', fontSize: '1.5rem' }}>
                       {language === 'zh-TW' ? userCard.card.name : (userCard.card.nameEn || userCard.card.name)}
-                      {showCardInstance && (
+                      {userCard.nickname ? (
+                        <span style={{ fontSize: '1rem', color: '#3b82f6', marginLeft: '0.5rem', fontWeight: '500' }}>
+                          🏷️ {userCard.nickname}
+                        </span>
+                      ) : showCardInstance && (
                         <span style={{ fontSize: '1rem', color: '#6b7280', marginLeft: '0.5rem' }}>
                           ({language === 'zh-TW' ? '卡片' : 'Card'} {userCard.cardInstance})
                         </span>
@@ -237,6 +245,11 @@ export default function Dashboard() {
                     <p className="card-bank" style={{ margin: 0, fontSize: '0.9rem', color: '#666' }}>
                       🏦 {language === 'zh-TW' ? userCard.card.bank : (userCard.card.bankEn || userCard.card.bank)}
                     </p>
+                    {userCard.card.fee && (
+                      <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: '#666' }}>
+                        💰 {language === 'zh-TW' ? '年費' : 'Annual Fee'}: {userCard.card.fee}
+                      </p>
+                    )}
                     {(userCard.afChargeMonth && userCard.afChargeDay) && (
                       <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: '#666' }}>
                         📅 {language === 'zh-TW' ? '年費收取日' : 'AF Charge Date'}: {userCard.afChargeMonth}/{userCard.afChargeDay}
@@ -265,7 +278,7 @@ export default function Dashboard() {
                         e.currentTarget.style.background = '#6b7280'
                       }}
                     >
-                      ⚙️ {language === 'zh-TW' ? '設定' : 'Settings'}
+                      📅 {language === 'zh-TW' ? '年費設定' : 'Annual Fee'}
                     </button>
                     <button
                       onClick={() => removeCard(userCard.id, language === 'zh-TW' ? userCard.card.name : (userCard.card.nameEn || userCard.card.name))}
@@ -340,13 +353,46 @@ export default function Dashboard() {
             overflowY: 'auto'
           }}>
             <h2 style={{ marginBottom: '1rem', color: 'var(--primary-color)' }}>
-              {language === 'zh-TW' ? '信用卡設定' : 'Card Settings'}
+              📅 {language === 'zh-TW' ? '年費設定' : 'Annual Fee Settings'}
             </h2>
             <p style={{ marginBottom: '1.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
               {language === 'zh-TW'
-                ? `設定「${selectedCard.card.name}」的相關資訊`
-                : `Settings for "${selectedCard.card.nameEn || selectedCard.card.name}"`}
+                ? `設定「${selectedCard.card.name}」的暱稱和年費收取日期`
+                : `Set nickname and annual fee charge date for "${selectedCard.card.nameEn || selectedCard.card.name}"`}
             </p>
+
+            {/* Card Nickname */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{
+                display: 'block',
+                marginBottom: '0.5rem',
+                fontSize: '0.95rem',
+                fontWeight: '600',
+                color: 'var(--text-color)'
+              }}>
+                🏷️ {language === 'zh-TW' ? '卡片暱稱' : 'Card Nickname'}
+              </label>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                {language === 'zh-TW'
+                  ? '為這張卡片設定一個暱稱，方便辨識多張相同卡片（例如：「日常用」、「Costco 專用」）'
+                  : 'Set a nickname for this card to easily identify multiple cards (e.g., "Daily Use", "Costco Only")'}
+              </p>
+              <input
+                type="text"
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                placeholder={language === 'zh-TW' ? '輸入暱稱（選填）' : 'Enter nickname (optional)'}
+                maxLength={30}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color)',
+                  fontSize: '1rem',
+                  backgroundColor: 'var(--card-bg)'
+                }}
+              />
+            </div>
 
             {/* Annual Fee Charge Date */}
             <div style={{ marginBottom: '1.5rem' }}>

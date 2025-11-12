@@ -288,9 +288,15 @@ export default function Dashboard() {
                   <h3 style={{ margin: 0, marginBottom: '0.25rem', fontSize: '1.2rem', fontWeight: '600' }}>
                     {userCard.card.name}
                   </h3>
-                  <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem', marginBottom: '1rem' }}>
+                  <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>
                     🏦 {userCard.card.bank}
                   </p>
+                  {userCard.card.fee && (
+                    <p style={{ margin: '0.25rem 0 0 0', color: '#6b7280', fontSize: '0.85rem' }}>
+                      💰 年費: {userCard.card.fee}
+                    </p>
+                  )}
+                  <div style={{ marginBottom: '1rem' }}></div>
 
                   {/* Benefits List */}
                   <div style={{ marginBottom: '0.75rem' }}>
