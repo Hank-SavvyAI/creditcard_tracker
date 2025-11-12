@@ -509,7 +509,7 @@ export default function Home() {
         </h3>
         <p style={{ margin: '0 0 1rem 0', fontSize: '0.9rem', color: '#666', lineHeight: '1.6' }}>
           {language === 'zh-TW'
-            ? '如果您覺得這個服務對您有幫助，歡迎贊助我們！您的支持將幫助我們持續改善服務、新增更多信用卡資料，並保持系統運作。'
+            ? '如果您覺得這個服務對您有幫助，歡迎贊助我們！您的支持將幫助我們持續改善服務，並保持系統運作，一杯咖啡的錢也非常感謝喔！'
             : 'If you find this service helpful, please consider supporting us! Your contribution helps us improve the service, add more credit card data, and keep the system running.'
           }
         </p>
