@@ -244,7 +244,18 @@ router.get('/users', async (req: AuthRequest, res) => {
         createdAt: 'desc'
       }
     });
-    res.json(users);
+
+    // Transform the response to match frontend expectations
+    const formattedUsers = users.map(user => ({
+      ...user,
+      _count: {
+        userCards: user._count.cards,
+        userBenefits: user._count.benefits,
+        pushSubscriptions: user._count.pushSubscriptions,
+      }
+    }));
+
+    res.json(formattedUsers);
   } catch (error: any) {
     console.error('Error fetching users:', error);
     res.status(500).json({ error: error.message });

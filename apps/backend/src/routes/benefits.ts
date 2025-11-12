@@ -5,36 +5,29 @@ import { archiveExpiredBenefits, getUserBenefitHistory } from '../services/archi
 
 const router = Router();
 
+// Helper function to calculate cycleNumber based on date and frequency
+function calculateCycleNumber(date: Date, frequency: string): number | null {
+  if (frequency === 'MONTHLY') {
+    return date.getMonth() + 1; // 1-12
+  } else if (frequency === 'QUARTERLY') {
+    return Math.floor(date.getMonth() / 3) + 1; // 1-4
+  } else if (frequency === 'SEMI_ANNUAL') {
+    return Math.floor(date.getMonth() / 6) + 1; // 1-2
+  } else if (frequency === 'YEARLY' || frequency === 'ONE_TIME') {
+    return 1;
+  }
+  return null;
+}
+
 // Helper function to find or create UserBenefit
 async function findOrCreateUserBenefit(
   userId: number,
   benefitId: number,
   year: number,
-  userCardId?: number
+  userCardId?: number,
+  usedAt?: Date
 ) {
-  // If userCardId is provided, use it
-  if (userCardId) {
-    let userBenefit = await prisma.userBenefit.findFirst({
-      where: { userCardId, benefitId, year },
-    });
-
-    if (!userBenefit) {
-      userBenefit = await prisma.userBenefit.create({
-        data: {
-          userId,
-          userCardId,
-          benefitId,
-          year,
-          isCompleted: false,
-          notificationEnabled: true,
-        },
-      });
-    }
-
-    return userBenefit;
-  }
-
-  // Otherwise, find the UserCard that has this benefit
+  // Get benefit to check frequency
   const benefit = await prisma.benefit.findUnique({
     where: { id: benefitId },
   });
@@ -43,7 +36,44 @@ async function findOrCreateUserBenefit(
     throw new Error('Benefit not found');
   }
 
-  // Find user's cards that have this benefit
+  // Calculate cycleNumber if usedAt is provided and benefit has a frequency
+  const cycleNumber = usedAt && benefit.frequency
+    ? calculateCycleNumber(usedAt, benefit.frequency)
+    : null;
+
+  // If userCardId is provided, use it
+  if (userCardId) {
+    const where: any = { userCardId, benefitId, year };
+    if (cycleNumber !== null) {
+      where.cycleNumber = cycleNumber;
+    }
+
+    let userBenefit = await prisma.userBenefit.findFirst({
+      where,
+    });
+
+    if (!userBenefit) {
+      const createData: any = {
+        userId,
+        userCardId,
+        benefitId,
+        year,
+        isCompleted: false,
+        notificationEnabled: true,
+      };
+      if (cycleNumber !== null) {
+        createData.cycleNumber = cycleNumber;
+      }
+
+      userBenefit = await prisma.userBenefit.create({
+        data: createData,
+      });
+    }
+
+    return userBenefit;
+  }
+
+  // Find user's cards that have this benefit (benefit already fetched above)
   const userCards = await prisma.userCard.findMany({
     where: {
       userId,
@@ -63,20 +93,30 @@ async function findOrCreateUserBenefit(
   // Use the single UserCard
   const userCard = userCards[0];
 
+  const where: any = { userCardId: userCard.id, benefitId, year };
+  if (cycleNumber !== null) {
+    where.cycleNumber = cycleNumber;
+  }
+
   let userBenefit = await prisma.userBenefit.findFirst({
-    where: { userCardId: userCard.id, benefitId, year },
+    where,
   });
 
   if (!userBenefit) {
+    const createData: any = {
+      userId,
+      userCardId: userCard.id,
+      benefitId,
+      year,
+      isCompleted: false,
+      notificationEnabled: true,
+    };
+    if (cycleNumber !== null) {
+      createData.cycleNumber = cycleNumber;
+    }
+
     userBenefit = await prisma.userBenefit.create({
-      data: {
-        userId,
-        userCardId: userCard.id,
-        benefitId,
-        year,
-        isCompleted: false,
-        notificationEnabled: true,
-      },
+      data: createData,
     });
   }
 
@@ -243,14 +283,16 @@ router.post('/:benefitId/usage', authenticate, async (req: AuthRequest, res) => 
       return res.status(400).json({ error: 'Invalid amount' });
     }
 
-    const currentYear = year || new Date().getFullYear();
+    const usageDate = usedAt ? new Date(usedAt) : new Date();
+    const currentYear = year || usageDate.getFullYear();
 
-    // Get or create UserBenefit
+    // Get or create UserBenefit with cycleNumber based on usedAt
     const userBenefit = await findOrCreateUserBenefit(
       req.user!.id,
       parseInt(benefitId),
       currentYear,
-      userCardId
+      userCardId,
+      usageDate
     );
 
     // Create usage record
@@ -258,7 +300,7 @@ router.post('/:benefitId/usage', authenticate, async (req: AuthRequest, res) => 
       data: {
         userBenefitId: userBenefit.id,
         amount: parseFloat(amount),
-        usedAt: usedAt ? new Date(usedAt) : new Date(),
+        usedAt: usageDate,
         note,
       },
     });

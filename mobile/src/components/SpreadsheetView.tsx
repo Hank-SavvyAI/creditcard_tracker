@@ -6,12 +6,15 @@ import { calculatePeriodEnd, formatDate, getCycleLabel } from '@/lib/dateUtils'
 
 interface Card {
   id: number
+  userCardId: number
   name: string
   issuer: string
   annualFee: string | null
   currency: string
   afChargeMonth?: number | null
   afChargeDay?: number | null
+  nickname?: string | null
+  cardInstance?: number
 }
 
 interface Benefit {
@@ -160,12 +163,15 @@ export default function SpreadsheetView() {
                 endDay: benefit.endDay,
                 card: {
                   id: userCard.card.id,
+                  userCardId: userCard.id,
                   name: language === 'zh-TW' ? userCard.card.name : (userCard.card.nameEn || userCard.card.name),
                   issuer: language === 'zh-TW' ? userCard.card.bank : (userCard.card.bankEn || userCard.card.bank),
                   annualFee: userCard.card.fee,
                   currency: userCard.card.currency || 'TWD',
                   afChargeMonth: userCard.afChargeMonth,
                   afChargeDay: userCard.afChargeDay,
+                  nickname: userCard.nickname,
+                  cardInstance: userCard.cardInstance,
                 },
               } as any,
             })
@@ -238,20 +244,20 @@ export default function SpreadsheetView() {
           </thead>
           <tbody>
             {(() => {
-              // Group benefits by card
+              // Group benefits by userCardId (to support multiple instances of the same card)
               const cardGroups = new Map<number, UserBenefit[]>()
               data.forEach(item => {
-                const cardId = item.benefit.card.id
-                if (!cardGroups.has(cardId)) {
-                  cardGroups.set(cardId, [])
+                const userCardId = item.benefit.card.userCardId
+                if (!cardGroups.has(userCardId)) {
+                  cardGroups.set(userCardId, [])
                 }
-                cardGroups.get(cardId)!.push(item)
+                cardGroups.get(userCardId)!.push(item)
               })
 
               const rows: JSX.Element[] = []
               let globalIndex = 0
 
-              cardGroups.forEach((benefits, cardId) => {
+              cardGroups.forEach((benefits) => {
                 benefits.forEach((item, benefitIndex) => {
                   const remaining = item.benefit.totalAmount - (item.usedAmount || 0)
                   const rowStyle = {
@@ -270,6 +276,15 @@ export default function SpreadsheetView() {
                         <>
                           <td style={{ ...rowStyle, verticalAlign: 'top', fontWeight: '600' }} rowSpan={totalCardRows}>
                             {item.benefit.card.name || '-'}
+                            {item.benefit.card.nickname ? (
+                              <span style={{ fontSize: '0.85rem', color: '#3b82f6', marginLeft: '0.5rem', fontWeight: '500' }}>
+                                🏷️ {item.benefit.card.nickname}
+                              </span>
+                            ) : item.benefit.card.cardInstance && item.benefit.card.cardInstance > 1 && (
+                              <span style={{ fontSize: '0.85rem', color: '#6b7280', marginLeft: '0.5rem' }}>
+                                (卡片 {item.benefit.card.cardInstance})
+                              </span>
+                            )}
                           </td>
                           <td style={{ ...rowStyle, verticalAlign: 'top' }} rowSpan={totalCardRows}>
                             {item.benefit.card.issuer || '-'}
