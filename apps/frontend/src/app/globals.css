@@ -1445,6 +1445,11 @@ body {
     padding: 0.5rem 1rem !important;
   }
 
+  /* Ensure button text (including spans without inline styles) use same font size */
+  header button span:not([style*="fontSize"]):not([style*="font-size"]) {
+    font-size: 1rem !important;
+  }
+
   header .header-left nav a {
     font-size: 1rem;
   }
