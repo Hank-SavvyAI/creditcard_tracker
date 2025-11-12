@@ -492,6 +492,69 @@ export default function Home() {
           </form>
         )}
       </div>
+
+      {/* PayPal 贊助區塊 */}
+      <div style={{
+        margin: '2rem auto',
+        maxWidth: '700px',
+        padding: '1.5rem',
+        background: 'linear-gradient(135deg, #FFF4E6 0%, #FFE0B2 100%)',
+        borderRadius: '12px',
+        textAlign: 'center',
+        border: '2px solid #FFA726',
+      }}>
+        <h3 style={{ margin: '0 0 0.75rem 0', fontSize: '1.2rem', color: '#E65100', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+          <span style={{ fontSize: '1.5rem' }}>☕</span>
+          {language === 'zh-TW' ? '支持我們的營運' : 'Support Our Operations'}
+        </h3>
+        <p style={{ margin: '0 0 1rem 0', fontSize: '0.9rem', color: '#666', lineHeight: '1.6' }}>
+          {language === 'zh-TW'
+            ? '如果您覺得這個服務對您有幫助，歡迎贊助我們！您的支持將幫助我們持續改善服務、新增更多信用卡資料，並保持系統運作。'
+            : 'If you find this service helpful, please consider supporting us! Your contribution helps us improve the service, add more credit card data, and keep the system running.'
+          }
+        </p>
+        <a
+          href="https://www.paypal.com/paypalme/savvyai"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            padding: '0.75rem 1.75rem',
+            background: '#0070BA',
+            color: 'white',
+            borderRadius: '8px',
+            textDecoration: 'none',
+            fontWeight: '600',
+            fontSize: '1rem',
+            cursor: 'pointer',
+            transition: 'all 0.3s',
+            boxShadow: '0 4px 12px rgba(0, 112, 186, 0.3)',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = '#005A9C'
+            e.currentTarget.style.transform = 'translateY(-2px)'
+            e.currentTarget.style.boxShadow = '0 6px 16px rgba(0, 112, 186, 0.4)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = '#0070BA'
+            e.currentTarget.style.transform = 'translateY(0)'
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 112, 186, 0.3)'
+          }}
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M20.067 8.478c.492.88.556 2.014.3 3.327-.74 3.806-3.276 5.12-6.514 5.12h-.5a.805.805 0 00-.794.68l-.04.22-.63 3.993-.028.15a.805.805 0 01-.794.68H7.723c-.535 0-.97-.44-.97-.983 0-.056.005-.112.014-.166l2.214-14.022c.096-.616.63-1.077 1.25-1.077h3.617c2.48 0 4.154.515 4.98 1.533.39.48.64 1.02.768 1.617.036.167.065.337.088.51.024.174.042.35.054.53.01.164.014.33.014.497zm-1.14 3.322c-.74 3.806-3.276 5.12-6.514 5.12h-.5a.805.805 0 00-.794.68l-.04.22-.63 3.993-.028.15a.805.805 0 01-.794.68H7.723c-.535 0-.97-.44-.97-.983 0-.056.005-.112.014-.166l2.214-14.022c.096-.616.63-1.077 1.25-1.077h3.617c2.48 0 4.154.515 4.98 1.533a4.64 4.64 0 01.768 1.617c.036.167.065.337.088.51.024.174.042.35.054.53.256 1.313.192 2.447-.3 3.327z"/>
+          </svg>
+          {language === 'zh-TW' ? '透過 PayPal 贊助' : 'Donate via PayPal'}
+        </a>
+        <p style={{ margin: '1rem 0 0 0', fontSize: '0.8rem', color: '#999' }}>
+          {language === 'zh-TW'
+            ? '每一份贊助都是對我們最大的鼓勵 ❤️'
+            : 'Every donation is a great encouragement to us ❤️'
+          }
+        </p>
+      </div>
     </div>
   )
 }
