@@ -123,6 +123,11 @@ export async function archiveExpiredBenefits() {
       let archivedCount = 0;
 
       for (const benefit of expiredBenefits) {
+        // Skip custom benefits (they don't have benefitId and don't need archiving)
+        if (benefit.isCustom || !benefit.benefitId) {
+          continue;
+        }
+
         // 1. 插入到歷史表
         const history = await tx.userBenefitHistory.create({
           data: {

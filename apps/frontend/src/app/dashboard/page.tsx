@@ -22,6 +22,12 @@ export default function Dashboard() {
   const [nickname, setNickname] = useState('')
   const [afChargeMonth, setAfChargeMonth] = useState<number | ''>('')
   const [afChargeDay, setAfChargeDay] = useState<number | ''>('')
+  const [openedAt, setOpenedAt] = useState('')
+  const [showCustomBenefitModal, setShowCustomBenefitModal] = useState(false)
+  const [customBenefitCard, setCustomBenefitCard] = useState<any>(null)
+  const [customAmount, setCustomAmount] = useState<number | ''>('')
+  const [customCurrency, setCustomCurrency] = useState('TWD')
+  const [customPeriodEnd, setCustomPeriodEnd] = useState('')
   const year = new Date().getFullYear()
 
   useEffect(() => {
@@ -100,6 +106,7 @@ export default function Dashboard() {
     setNickname(userCard.nickname || '')
     setAfChargeMonth(userCard.afChargeMonth || '')
     setAfChargeDay(userCard.afChargeDay || '')
+    setOpenedAt(userCard.openedAt ? new Date(userCard.openedAt).toISOString().split('T')[0] : '')
     setShowSettingsModal(true)
   }
 
@@ -109,6 +116,7 @@ export default function Dashboard() {
     setNickname('')
     setAfChargeMonth('')
     setAfChargeDay('')
+    setOpenedAt('')
   }
 
   async function saveCardSettings() {
@@ -119,6 +127,7 @@ export default function Dashboard() {
         nickname: nickname.trim() === '' ? undefined : nickname.trim(),
         afChargeMonth: afChargeMonth === '' ? null : afChargeMonth,
         afChargeDay: afChargeDay === '' ? null : afChargeDay,
+        openedAt: openedAt === '' ? null : openedAt,
       })
       alert(language === 'zh-TW' ? '設定已儲存' : 'Settings saved successfully')
       closeCardSettings()
@@ -126,6 +135,49 @@ export default function Dashboard() {
     } catch (error) {
       console.error('Failed to save card settings:', error)
       alert(language === 'zh-TW' ? '儲存失敗' : 'Failed to save settings')
+    }
+  }
+
+  function openCustomBenefitModal(userCard: any) {
+    setCustomBenefitCard(userCard)
+    setCustomAmount('')
+    setCustomCurrency(userCard.card.currency || 'TWD')
+    // Set default period end to 1 year from now
+    const defaultDate = new Date()
+    defaultDate.setFullYear(defaultDate.getFullYear() + 1)
+    setCustomPeriodEnd(defaultDate.toISOString().split('T')[0])
+    setShowCustomBenefitModal(true)
+  }
+
+  function closeCustomBenefitModal() {
+    setShowCustomBenefitModal(false)
+    setCustomBenefitCard(null)
+    setCustomAmount('')
+    setCustomCurrency('TWD')
+    setCustomPeriodEnd('')
+  }
+
+  async function saveCustomBenefit() {
+    if (!customBenefitCard || customAmount === '' || !customPeriodEnd) {
+      alert(language === 'zh-TW' ? '請填寫所有必填欄位' : 'Please fill in all required fields')
+      return
+    }
+
+    try {
+      await api.createCustomBenefit({
+        userCardId: customBenefitCard.id,
+        customTitle: '開卡禮/續卡禮',
+        customTitleEn: 'Open/Retention Offer',
+        customAmount: typeof customAmount === 'number' ? customAmount : 0,
+        customCurrency,
+        periodEnd: customPeriodEnd,
+      })
+      alert(language === 'zh-TW' ? '自定義福利已新增' : 'Custom benefit added successfully')
+      closeCustomBenefitModal()
+      await loadData()
+    } catch (error) {
+      console.error('Failed to save custom benefit:', error)
+      alert(language === 'zh-TW' ? '新增失敗' : 'Failed to add custom benefit')
     }
   }
 
@@ -319,6 +371,38 @@ export default function Dashboard() {
                       onUpdateSettings={updateNotificationSettings}
                     />
                   ))}
+
+                  {/* 新增自定義福利按鈕 */}
+                  <button
+                    onClick={() => openCustomBenefitModal(userCard)}
+                    style={{
+                      width: '100%',
+                      marginTop: '1rem',
+                      padding: '0.75rem',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontWeight: '600',
+                      fontSize: '0.95rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                      transition: 'transform 0.2s, box-shadow 0.2s',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)'
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)'
+                      e.currentTarget.style.boxShadow = 'none'
+                    }}
+                  >
+                    🎁 {language === 'zh-TW' ? '新增自定義福利（開卡禮/續卡禮）' : 'Add Custom Benefit (Signup/Renewal Bonus)'}
+                  </button>
                 </div>
               </div>
             </div>)
@@ -468,6 +552,37 @@ export default function Dashboard() {
               </div>
             </div>
 
+            {/* Card Opening Date (for 5/24 rule) */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{
+                display: 'block',
+                marginBottom: '0.5rem',
+                fontSize: '0.95rem',
+                fontWeight: '600',
+                color: 'var(--text-color)'
+              }}>
+                🗓️ {language === 'zh-TW' ? '開卡日期' : 'Card Opening Date'}
+              </label>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                {language === 'zh-TW'
+                  ? '設定您的開卡日期，用於計算 5/24 規則（兩年內開了幾張卡）'
+                  : 'Set your card opening date to track 5/24 rule (number of cards opened in 24 months)'}
+              </p>
+              <input
+                type="date"
+                value={openedAt}
+                onChange={(e) => setOpenedAt(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color)',
+                  fontSize: '1rem',
+                  backgroundColor: 'var(--card-bg)'
+                }}
+              />
+            </div>
+
             {/* Buttons */}
             <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
               <button
@@ -483,6 +598,143 @@ export default function Dashboard() {
                 style={{ flex: 1 }}
               >
                 {language === 'zh-TW' ? '儲存' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Benefit Modal */}
+      {showCustomBenefitModal && customBenefitCard && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '1rem',
+          overflowY: 'auto'
+        }}>
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '12px',
+            padding: '2rem',
+            maxWidth: '550px',
+            width: '100%',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+            maxHeight: '90vh',
+            overflowY: 'auto'
+          }}>
+            <h2 style={{ marginBottom: '1rem', color: 'var(--primary-color)' }}>
+              🎁 {language === 'zh-TW' ? '新增自定義福利' : 'Add Custom Benefit'}
+            </h2>
+            <p style={{ marginBottom: '1.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+              {language === 'zh-TW'
+                ? `為「${customBenefitCard.card.name}」新增開卡禮或續卡禮`
+                : `Add Open/Retention Offer for "${customBenefitCard.card.nameEn || customBenefitCard.card.name}"`}
+            </p>
+
+            {/* Amount and Currency */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{
+                display: 'block',
+                marginBottom: '0.5rem',
+                fontSize: '0.95rem',
+                fontWeight: '600',
+                color: 'var(--text-color)'
+              }}>
+                {language === 'zh-TW' ? '福利金額' : 'Benefit Amount'} <span style={{ color: '#ef4444' }}>*</span>
+              </label>
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <select
+                  value={customCurrency}
+                  onChange={(e) => setCustomCurrency(e.target.value)}
+                  style={{
+                    width: '120px',
+                    padding: '0.75rem',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border-color)',
+                    fontSize: '1rem',
+                    backgroundColor: 'var(--card-bg)'
+                  }}
+                >
+                  <option value="TWD">TWD</option>
+                  <option value="USD">USD</option>
+                  <option value="JPY">JPY</option>
+                  <option value="CNY">CNY</option>
+                  <option value="EUR">EUR</option>
+                  <option value="GBP">GBP</option>
+                </select>
+                <input
+                  type="number"
+                  value={customAmount}
+                  onChange={(e) => setCustomAmount(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                  placeholder={language === 'zh-TW' ? '輸入金額' : 'Enter amount'}
+                  min="0"
+                  step="0.01"
+                  style={{
+                    flex: 1,
+                    padding: '0.75rem',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border-color)',
+                    fontSize: '1rem',
+                    backgroundColor: 'var(--card-bg)'
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Period End Date */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{
+                display: 'block',
+                marginBottom: '0.5rem',
+                fontSize: '0.95rem',
+                fontWeight: '600',
+                color: 'var(--text-color)'
+              }}>
+                {language === 'zh-TW' ? '到期日' : 'Expiration Date'} <span style={{ color: '#ef4444' }}>*</span>
+              </label>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                {language === 'zh-TW'
+                  ? '設定這項福利的到期日（例如：開卡禮通常需要在開卡後 3-6 個月內達成）'
+                  : 'Set the expiration date for this benefit (e.g., signup bonuses typically need to be completed within 3-6 months)'}
+              </p>
+              <input
+                type="date"
+                value={customPeriodEnd}
+                onChange={(e) => setCustomPeriodEnd(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color)',
+                  fontSize: '1rem',
+                  backgroundColor: 'var(--card-bg)'
+                }}
+              />
+            </div>
+
+            {/* Buttons */}
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+              <button
+                onClick={closeCustomBenefitModal}
+                className="btn btn-secondary"
+                style={{ flex: 1 }}
+              >
+                {language === 'zh-TW' ? '取消' : 'Cancel'}
+              </button>
+              <button
+                onClick={saveCustomBenefit}
+                className="btn btn-primary"
+                style={{ flex: 1 }}
+              >
+                {language === 'zh-TW' ? '新增' : 'Add'}
               </button>
             </div>
           </div>

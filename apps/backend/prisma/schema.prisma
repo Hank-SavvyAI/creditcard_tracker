@@ -107,6 +107,7 @@ model UserCard {
   nickname      String?
   afChargeMonth Int?            // Annual fee charge month (1-12)
   afChargeDay   Int?            // Annual fee charge day (1-31)
+  openedAt      DateTime?       // Card opening date (用於計算 5/24 rule)
   addedAt       DateTime        @default(now())
 
   user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -120,7 +121,7 @@ model UserBenefit {
   id                Int             @id @default(autoincrement())
   userId            Int             // 保留用於查詢
   userCardId        Int             // 綁定到具體的 UserCard
-  benefitId         Int
+  benefitId         Int?            // 自定義福利時為 null
   year              Int
   cycleNumber       Int?            // 1-12(月), 1-4(季), 1(年), null(一次性)
   periodEnd         DateTime?       // 週期結束時間，用於判斷是否需要歸檔
@@ -131,15 +132,24 @@ model UserBenefit {
   reminderDays      Int?            // 自訂提醒天數，null 表示使用 Benefit 的預設值
   notificationEnabled Boolean       @default(true) // 是否啟用通知
   usedAmount        Float?          @default(0)    // 已使用金額
+
+  // 自定義福利字段
+  isCustom          Boolean         @default(false) // 是否為自定義福利（開卡禮、續卡禮等）
+  customTitle       String?         // 自定義福利名稱（中文）
+  customTitleEn     String?         // 自定義福利名稱（英文）
+  customAmount      Float?          // 自定義福利總金額
+  customCurrency    String?         // 自定義福利幣別
+
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
   user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   userCard      UserCard        @relation(fields: [userCardId], references: [id], onDelete: Cascade)
-  benefit       Benefit         @relation(fields: [benefitId], references: [id], onDelete: Cascade)
+  benefit       Benefit?        @relation(fields: [benefitId], references: [id], onDelete: Cascade)
   usages        BenefitUsage[]
 
-  @@unique([userCardId, benefitId, year, cycleNumber])
+  @@index([userCardId, benefitId, year, cycleNumber])
+  @@index([userCardId, year, isCustom])
 }
 
 model BenefitUsage {

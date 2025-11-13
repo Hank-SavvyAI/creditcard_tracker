@@ -35,8 +35,17 @@ export async function checkAndNotifyExpiringBenefits() {
     for (const userBenefit of userBenefits) {
       if (!userBenefit.periodEnd) continue;
 
+      // Skip custom benefits or benefits without associated benefit data
+      if (userBenefit.isCustom || !userBenefit.benefit || !userBenefit.benefitId) {
+        continue;
+      }
+
+      // Type guard: at this point we know benefit and benefitId exist
+      const benefit = userBenefit.benefit;
+      const benefitId = userBenefit.benefitId;
+
       // 計算提醒天數（使用自訂值或 Benefit 預設值）
-      const reminderDays = userBenefit.reminderDays ?? userBenefit.benefit.reminderDays;
+      const reminderDays = userBenefit.reminderDays ?? benefit.reminderDays;
 
       // 計算提醒日期
       const reminderDate = new Date(userBenefit.periodEnd);
@@ -49,24 +58,24 @@ export async function checkAndNotifyExpiringBenefits() {
         );
 
         const title = '💳 信用卡福利即將到期';
-        const body = `您的 ${userBenefit.benefit.card.name} - ${userBenefit.benefit.title} 還有 ${daysRemaining} 天到期（${userBenefit.periodEnd.toLocaleDateString('zh-TW')}）`;
+        const body = `您的 ${benefit.card.name} - ${benefit.title} 還有 ${daysRemaining} 天到期（${userBenefit.periodEnd.toLocaleDateString('zh-TW')}）`;
 
         try {
           const result = await sendNotification({
             userId: userBenefit.userId,
             title,
             body,
-            benefitId: userBenefit.benefitId,
+            benefitId: benefitId,
             data: {
               userBenefitId: userBenefit.id,
-              benefitId: userBenefit.benefitId,
+              benefitId: benefitId,
               daysRemaining,
             },
           });
 
           if (result.success) {
             notificationsSent++;
-            console.log(`✅ Sent notification to user ${userBenefit.userId} for benefit ${userBenefit.benefit.title}`);
+            console.log(`✅ Sent notification to user ${userBenefit.userId} for benefit ${benefit.title}`);
           } else {
             errors++;
             console.error(`❌ Failed to send notification to user ${userBenefit.userId}:`, result.results?.errors);
@@ -120,6 +129,11 @@ export async function archiveExpiredBenefits() {
     let archivedCount = 0;
 
     for (const benefit of expiredBenefits) {
+      // Skip custom benefits (they don't have benefitId and don't need archiving)
+      if (benefit.isCustom || !benefit.benefitId) {
+        continue;
+      }
+
       try {
         // 創建歷史記錄
         await prisma.userBenefitHistory.create({
@@ -128,7 +142,7 @@ export async function archiveExpiredBenefits() {
             userCardId: benefit.userCardId,
             benefitId: benefit.benefitId,
             year: benefit.year,
-            cycleNumber: benefit.cycleNumber,
+            cycleNumber: benefit.cycleNumber ?? undefined,
             periodEnd: benefit.periodEnd,
             isCompleted: benefit.isCompleted,
             completedAt: benefit.completedAt,

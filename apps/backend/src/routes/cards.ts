@@ -146,7 +146,7 @@ router.post('/my', authenticate, async (req: AuthRequest, res) => {
 // Update user card settings
 router.patch('/my/:userCardId', authenticate, async (req: AuthRequest, res) => {
   try {
-    const { nickname, afChargeMonth, afChargeDay } = req.body;
+    const { nickname, afChargeMonth, afChargeDay, openedAt } = req.body;
     const userCardId = parseInt(req.params.userCardId);
 
     // Validate afChargeMonth and afChargeDay if provided
@@ -166,15 +166,22 @@ router.patch('/my/:userCardId', authenticate, async (req: AuthRequest, res) => {
       return res.status(404).json({ error: 'Card not found' });
     }
 
+    const updateData: any = {
+      nickname,
+      afChargeMonth,
+      afChargeDay,
+    };
+
+    // Add openedAt if provided
+    if (openedAt !== undefined) {
+      updateData.openedAt = openedAt ? new Date(openedAt) : null;
+    }
+
     const userCard = await prisma.userCard.update({
       where: {
         id: userCardId,
       },
-      data: {
-        nickname,
-        afChargeMonth,
-        afChargeDay,
-      },
+      data: updateData,
       include: {
         card: true,
       },
@@ -210,6 +217,52 @@ router.delete('/my/:userCardId', authenticate, async (req: AuthRequest, res) => 
   } catch (error) {
     console.error('Failed to remove card:', error);
     res.status(500).json({ error: 'Failed to remove card' });
+  }
+});
+
+// Get 5/24 status (cards opened in past 24 months)
+router.get('/524-status', authenticate, async (req: AuthRequest, res) => {
+  try {
+    const now = new Date();
+    const twentyFourMonthsAgo = new Date();
+    twentyFourMonthsAgo.setMonth(now.getMonth() - 24);
+
+    // Find all cards opened in the past 24 months
+    const recentCards = await prisma.userCard.findMany({
+      where: {
+        userId: req.user!.id,
+        openedAt: {
+          gte: twentyFourMonthsAgo,
+          lte: now,
+        },
+      },
+      include: {
+        card: true,
+      },
+      orderBy: {
+        openedAt: 'desc',
+      },
+    });
+
+    const count = recentCards.length;
+    const isOver524 = count >= 5;
+
+    res.json({
+      count,
+      isOver524,
+      cards: recentCards.map(uc => ({
+        id: uc.id,
+        cardName: uc.card.name,
+        nickname: uc.nickname,
+        openedAt: uc.openedAt,
+        cardInstance: uc.cardInstance,
+      })),
+      calculatedAt: now,
+      periodStart: twentyFourMonthsAgo,
+    });
+  } catch (error) {
+    console.error('Failed to get 5/24 status:', error);
+    res.status(500).json({ error: 'Failed to get 5/24 status' });
   }
 });
 

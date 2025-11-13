@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useLanguageStore, t } from '@/store/language'
 import { api } from '@/lib/api'
+import {
+  Box
+} from '@mui/material';
 
 export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
@@ -283,6 +286,80 @@ export default function Home() {
               >
                 {language === 'zh-TW' ? '使用 LINE 登入' : 'Sign in with LINE'}
               </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* QR Code 加入好友區塊 */}
+      {isMounted && !isLoggedIn && (
+        <div style={{
+          margin: '1.5rem auto 0',
+          maxWidth: '700px',
+          padding: '1.5rem',
+          background: 'white',
+          borderRadius: '12px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        }}>
+          <h3 style={{ textAlign: 'center', marginBottom: '1rem', color: '#333', fontSize: '1.1rem' }}>
+            {language === 'zh-TW' ? '📱 掃描 QR Code 加入好友' : '📱 Scan QR Code to Add Friends'}
+          </h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', maxWidth: '500px', margin: '0 auto' }}>
+            {/* LINE QR Code */}
+            <div style={{ textAlign: 'center' }}>
+              <h4 style={{ margin: '0 0 0.75rem 0', color: '#00B900', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontSize: '1rem' }}>
+                <span style={{ fontSize: '1.5rem' }}>💚</span>
+                LINE
+              </h4>
+              <img
+                src="https://qr-official.line.me/gs/M_795vjfjm_GW.png?oat_content=qr"
+                alt="LINE QR Code"
+                style={{
+                  width: '180px',
+                  height: '180px',
+                  border: '2px solid #00B900',
+                  borderRadius: '12px',
+                  padding: '8px',
+                  background: 'white',
+                }}
+              />
+              <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#666' }}>
+                {language === 'zh-TW' ? '掃描加入 LINE 好友' : 'Scan to add LINE friend'}
+              </p>
+            </div>
+
+            {/* Telegram QR Code */}
+            <div style={{ textAlign: 'center' }}>
+              <h4 style={{ margin: '0 0 0.75rem 0', color: '#0088cc', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontSize: '1rem' }}>
+                <span style={{ fontSize: '1.5rem' }}>💬</span>
+                Telegram
+              </h4>
+              <Box
+                sx={{
+                  width: 180,
+                  height: 180,
+                  background: 'white',
+                  border: '2px solid rgb(37,99,235)',
+                  borderRadius: 2,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  mb: 2,
+                  margin: '0 auto 16px',
+                  overflow: 'hidden',
+                  padding: 1,
+                }}
+              >
+                {/* 使用 QR Server API 動態生成 QR Code */}
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent('https://t.me/luxuraibot')}`}
+                  alt="Telegram QR Code"
+                  style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                />
+              </Box>
+              <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#666' }}>
+                {language === 'zh-TW' ? '掃描加入 Telegram Bot' : 'Scan to join Telegram Bot'}
+              </p>
             </div>
           </div>
         </div>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useLanguageStore } from '@/store/language'
 import { calculatePeriodEnd, formatDate, getCycleLabel } from '@/lib/dateUtils'
@@ -43,6 +43,7 @@ interface UserBenefit {
   isCompleted: boolean
   usedAmount: number
   usages?: BenefitUsage[]
+  isCustom?: boolean
   benefit: Benefit & { card: Card }
 }
 
@@ -56,6 +57,7 @@ export default function SpreadsheetView() {
   const [nickname, setNickname] = useState('')
   const [afChargeMonth, setAfChargeMonth] = useState<number | ''>('')
   const [afChargeDay, setAfChargeDay] = useState<number | ''>('')
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   const translations = {
     'zh-TW': {
@@ -169,6 +171,10 @@ export default function SpreadsheetView() {
             const totalAmount = benefit.amount || 0
             const isCompleted = totalAmount > 0 && aggregatedUsedAmount >= totalAmount
 
+            // Check if this is a custom benefit from any userBenefit
+            const isCustomBenefit = benefit.userBenefits?.some((ub: any) => ub.isCustom)
+            const customBenefitData = benefit.userBenefits?.find((ub: any) => ub.isCustom)
+
             allBenefits.push({
               id: userBenefit?.id || 0,
               benefitId: benefit.id,
@@ -178,12 +184,15 @@ export default function SpreadsheetView() {
               isCompleted, // Use calculated status based on actual amounts
               usedAmount: aggregatedUsedAmount, // Use aggregated amount from API
               usages,
+              isCustom: isCustomBenefit,
               benefit: {
                 id: benefit.id,
-                name: language === 'zh-TW' ? benefit.title : (benefit.titleEn || benefit.title),
-                totalAmount: benefit.amount || 0,
-                currency: benefit.currency,
-                cycleType: benefit.frequency,
+                name: isCustomBenefit
+                  ? (language === 'zh-TW' ? customBenefitData?.customTitle : (customBenefitData?.customTitleEn || customBenefitData?.customTitle))
+                  : (language === 'zh-TW' ? benefit.title : (benefit.titleEn || benefit.title)),
+                totalAmount: isCustomBenefit ? (customBenefitData?.customAmount || 0) : (benefit.amount || 0),
+                currency: isCustomBenefit ? customBenefitData?.customCurrency : benefit.currency,
+                cycleType: isCustomBenefit ? null : benefit.frequency,
                 endMonth: benefit.endMonth,
                 endDay: benefit.endDay,
                 card: {
@@ -294,6 +303,22 @@ export default function SpreadsheetView() {
     }
   }
 
+  // Scroll to left or right
+  const scrollToLeft = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo({ left: 0, behavior: 'smooth' })
+    }
+  }
+
+  const scrollToRight = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo({
+        left: scrollContainerRef.current.scrollWidth,
+        behavior: 'smooth'
+      })
+    }
+  }
+
   if (loading) {
     return (
       <div style={{ padding: '2rem', textAlign: 'center' }}>
@@ -313,12 +338,65 @@ export default function SpreadsheetView() {
           {t.noData}
         </div>
       ) : (
-        <div className="spreadsheet-container" style={{
-          border: '1px solid #dee2e6',
-          borderRadius: '8px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-          WebkitOverflowScrolling: 'touch',
-        }}>
+        <div>
+          {/* Scroll buttons at the top */}
+          <div style={{
+            display: 'flex',
+            gap: '0.5rem',
+            marginBottom: '0.5rem',
+            justifyContent: 'flex-end'
+          }}>
+            <button
+              onClick={scrollToLeft}
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                border: '2px solid #3b82f6',
+                borderRadius: '6px',
+                padding: '0.4rem 0.8rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '0.9rem',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                color: '#3b82f6',
+                fontWeight: '600',
+              }}
+              aria-label="Scroll to left"
+            >
+              ← {language === 'zh-TW' ? '最左側' : 'Left'}
+            </button>
+            <button
+              onClick={scrollToRight}
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                border: '2px solid #3b82f6',
+                borderRadius: '6px',
+                padding: '0.4rem 0.8rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '0.9rem',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                color: '#3b82f6',
+                fontWeight: '600',
+              }}
+              aria-label="Scroll to right"
+            >
+              {language === 'zh-TW' ? '最右側' : 'Right'} →
+            </button>
+          </div>
+          <div
+            ref={scrollContainerRef}
+            className="spreadsheet-container"
+            style={{
+              border: '1px solid #dee2e6',
+              borderRadius: '8px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              WebkitOverflowScrolling: 'touch',
+            }}
+          >
         <table style={{
           width: '100%',
           borderCollapse: 'collapse',
@@ -457,7 +535,10 @@ export default function SpreadsheetView() {
                           </td>
                         </>
                       )}
-                      <td style={{ ...rowStyle, backgroundColor: benefitColor }}>{item.benefit.name || '-'}</td>
+                      <td style={{ ...rowStyle, backgroundColor: benefitColor }}>
+                        {item.isCustom && '🎁 '}
+                        {item.benefit.name || '-'}
+                      </td>
                       <td style={{ ...rowStyle, textAlign: 'right' }}>
                         {item.benefit.totalAmount != null
                           ? `${item.benefit.currency || ''} ${item.benefit.totalAmount.toFixed(2)}`
@@ -520,6 +601,7 @@ export default function SpreadsheetView() {
             })()}
           </tbody>
         </table>
+          </div>
         </div>
       )}
 

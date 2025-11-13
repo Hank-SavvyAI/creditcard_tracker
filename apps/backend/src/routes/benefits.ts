@@ -648,4 +648,123 @@ router.get('/history', authenticate, async (req: AuthRequest, res) => {
   }
 });
 
+// Create custom benefit (signup bonus, renewal bonus, etc.)
+router.post('/custom', authenticate, async (req: AuthRequest, res) => {
+  try {
+    const { userCardId, customTitle, customTitleEn, customAmount, customCurrency, periodEnd } = req.body;
+
+    if (!userCardId || !customTitle || !customAmount || !customCurrency || !periodEnd) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Verify user owns this card
+    const userCard = await prisma.userCard.findFirst({
+      where: {
+        id: userCardId,
+        userId: req.user!.id,
+      },
+    });
+
+    if (!userCard) {
+      return res.status(404).json({ error: 'Card not found' });
+    }
+
+    const year = new Date(periodEnd).getFullYear();
+
+    const customBenefit = await prisma.userBenefit.create({
+      data: {
+        userId: req.user!.id,
+        userCardId,
+        benefitId: null,
+        year,
+        cycleNumber: null,
+        periodEnd: new Date(periodEnd),
+        isCustom: true,
+        customTitle,
+        customTitleEn: customTitleEn || customTitle,
+        customAmount,
+        customCurrency,
+        isCompleted: false,
+        usedAmount: 0,
+      },
+    });
+
+    res.json(customBenefit);
+  } catch (error) {
+    console.error('Failed to create custom benefit:', error);
+    res.status(500).json({ error: 'Failed to create custom benefit' });
+  }
+});
+
+// Update custom benefit
+router.put('/custom/:id', authenticate, async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+    const { customTitle, customTitleEn, customAmount, customCurrency, periodEnd } = req.body;
+
+    // Verify this is a custom benefit owned by the user
+    const existingBenefit = await prisma.userBenefit.findFirst({
+      where: {
+        id: parseInt(id),
+        userId: req.user!.id,
+        isCustom: true,
+      },
+    });
+
+    if (!existingBenefit) {
+      return res.status(404).json({ error: 'Custom benefit not found' });
+    }
+
+    const updateData: any = {};
+    if (customTitle !== undefined) updateData.customTitle = customTitle;
+    if (customTitleEn !== undefined) updateData.customTitleEn = customTitleEn;
+    if (customAmount !== undefined) updateData.customAmount = customAmount;
+    if (customCurrency !== undefined) updateData.customCurrency = customCurrency;
+    if (periodEnd !== undefined) {
+      updateData.periodEnd = new Date(periodEnd);
+      updateData.year = new Date(periodEnd).getFullYear();
+    }
+
+    const updated = await prisma.userBenefit.update({
+      where: { id: parseInt(id) },
+      data: updateData,
+    });
+
+    res.json(updated);
+  } catch (error) {
+    console.error('Failed to update custom benefit:', error);
+    res.status(500).json({ error: 'Failed to update custom benefit' });
+  }
+});
+
+// Delete custom benefit
+router.delete('/custom/:id', authenticate, async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+
+    // Verify this is a custom benefit owned by the user
+    const existingBenefit = await prisma.userBenefit.findFirst({
+      where: {
+        id: parseInt(id),
+        userId: req.user!.id,
+        isCustom: true,
+      },
+    });
+
+    if (!existingBenefit) {
+      return res.status(404).json({ error: 'Custom benefit not found' });
+    }
+
+    // Delete the custom benefit (will cascade delete usages)
+    await prisma.userBenefit.delete({
+      where: { id: parseInt(id) },
+    });
+
+    res.json({ message: 'Custom benefit deleted successfully' });
+  } catch (error) {
+    console.error('Failed to delete custom benefit:', error);
+    res.status(500).json({ error: 'Failed to delete custom benefit' });
+  }
+});
+
 export default router;

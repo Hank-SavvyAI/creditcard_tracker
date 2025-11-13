@@ -74,7 +74,7 @@ export class ApiClient {
     });
   }
 
-  async updateCardSettings(userCardId: number, settings: { nickname?: string; afChargeMonth?: number | null; afChargeDay?: number | null }) {
+  async updateCardSettings(userCardId: number, settings: { nickname?: string; afChargeMonth?: number | null; afChargeDay?: number | null; openedAt?: string | null }) {
     return this.request(`/api/cards/my/${userCardId}`, {
       method: 'PATCH',
       body: JSON.stringify(settings),
@@ -105,6 +105,39 @@ export class ApiClient {
     return this.request(`/api/benefits/${benefitId}/settings`, {
       method: 'PATCH',
       body: JSON.stringify({ year, ...settings, userCardId }),
+    });
+  }
+
+  async createCustomBenefit(data: {
+    userCardId: number;
+    customTitle: string;
+    customTitleEn?: string;
+    customAmount: number;
+    customCurrency: string;
+    periodEnd: string;
+  }) {
+    return this.request('/api/benefits/custom', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateCustomBenefit(id: number, data: {
+    customTitle?: string;
+    customTitleEn?: string;
+    customAmount?: number;
+    customCurrency?: string;
+    periodEnd?: string;
+  }) {
+    return this.request(`/api/benefits/custom/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteCustomBenefit(id: number) {
+    return this.request(`/api/benefits/custom/${id}`, {
+      method: 'DELETE',
     });
   }
 
