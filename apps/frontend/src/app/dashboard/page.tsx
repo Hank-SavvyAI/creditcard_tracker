@@ -278,7 +278,7 @@ export default function Dashboard() {
                         e.currentTarget.style.background = '#6b7280'
                       }}
                     >
-                      📅 {language === 'zh-TW' ? '年費設定' : 'Annual Fee'}
+                      📅 {language === 'zh-TW' ? '年費與卡片暱稱設定' : 'Card Settings'}
                     </button>
                     <button
                       onClick={() => removeCard(userCard.id, language === 'zh-TW' ? userCard.card.name : (userCard.card.nameEn || userCard.card.name))}
@@ -353,7 +353,7 @@ export default function Dashboard() {
             overflowY: 'auto'
           }}>
             <h2 style={{ marginBottom: '1rem', color: 'var(--primary-color)' }}>
-              📅 {language === 'zh-TW' ? '年費設定' : 'Annual Fee Settings'}
+              📅 {language === 'zh-TW' ? '年費與卡片暱稱設定' : 'Card Settings'}
             </h2>
             <p style={{ marginBottom: '1.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
               {language === 'zh-TW'

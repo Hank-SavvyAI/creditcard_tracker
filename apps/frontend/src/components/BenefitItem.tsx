@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { getCurrentCycleLabel } from '@/lib/dateUtils'
+import { getCurrentCycleLabel, getLocalTodayDate } from '@/lib/dateUtils'
 
 interface BenefitItemProps {
   benefit: any
@@ -27,8 +27,8 @@ export default function BenefitItem({ benefit, userCardId, language, year, onTog
   const [usedAmount, setUsedAmount] = useState(0)
   const [history, setHistory] = useState<any[]>([])
 
-  const getTodayDate = () => new Date().toISOString().split('T')[0]
-  const [newUsage, setNewUsage] = useState({ amount: '', usedAt: getTodayDate(), note: '' })
+  // Use local timezone for today's date instead of UTC
+  const [newUsage, setNewUsage] = useState({ amount: '', usedAt: getLocalTodayDate(), note: '' })
 
   const userBenefit = benefit.userBenefits[0]
   const completed = userBenefit && userBenefit.isCompleted
@@ -81,7 +81,7 @@ export default function BenefitItem({ benefit, userCardId, language, year, onTog
         body: JSON.stringify({
           year,
           amount: parseFloat(newUsage.amount),
-          usedAt: newUsage.usedAt || new Date().toISOString().split('T')[0],
+          usedAt: newUsage.usedAt || getLocalTodayDate(),
           note: newUsage.note || null,
           userCardId,
         }),
@@ -99,7 +99,7 @@ export default function BenefitItem({ benefit, userCardId, language, year, onTog
           // Added to current cycle - update display
           setUsages(data.usages || [])
           setUsedAmount(data.usedAmount || 0)
-          setNewUsage({ amount: '', usedAt: getTodayDate(), note: '' })
+          setNewUsage({ amount: '', usedAt: getLocalTodayDate(), note: '' })
           setShowUsageForm(false)
 
           // Auto-complete if used amount >= total amount

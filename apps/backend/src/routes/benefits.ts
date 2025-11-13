@@ -182,6 +182,13 @@ router.get('/my', authenticate, async (req: AuthRequest, res) => {
                 benefitId: benefit.id,
                 year,
               },
+              include: {
+                usages: {
+                  orderBy: {
+                    usedAt: 'desc'
+                  }
+                }
+              }
             });
             return {
               ...benefit,
@@ -305,7 +312,15 @@ router.post('/:benefitId/usage', authenticate, async (req: AuthRequest, res) => 
       return res.status(400).json({ error: 'Invalid amount' });
     }
 
-    const usageDate = usedAt ? new Date(usedAt) : new Date();
+    // Parse date as local time (not UTC)
+    let usageDate: Date;
+    if (usedAt) {
+      // If usedAt is provided, parse it as local date (YYYY-MM-DD)
+      const [y, m, d] = usedAt.split('-').map(Number);
+      usageDate = new Date(y, m - 1, d, 12, 0, 0); // Set to noon local time to avoid timezone issues
+    } else {
+      usageDate = new Date();
+    }
     const currentYear = year || usageDate.getFullYear();
 
     // Get benefit to check frequency and calculate period
@@ -472,6 +487,7 @@ router.get('/:benefitId/usage', authenticate, async (req: AuthRequest, res) => {
     const { benefitId } = req.params;
     const year = parseInt(req.query.year as string) || new Date().getFullYear();
     const userCardId = req.query.userCardId ? parseInt(req.query.userCardId as string) : undefined;
+    const allCycles = req.query.allCycles === 'true'; // If true, return all cycles, not just current
 
     // Get benefit to check frequency
     const benefit = await prisma.benefit.findUnique({
@@ -496,30 +512,62 @@ router.get('/:benefitId/usage', authenticate, async (req: AuthRequest, res) => {
       where.userCardId = userCardId;
     }
 
-    // Filter by current cycle number if benefit has frequency
-    if (currentCycleNumber !== null) {
+    // Filter by current cycle number if benefit has frequency (unless allCycles is requested)
+    if (!allCycles && currentCycleNumber !== null) {
       where.cycleNumber = currentCycleNumber;
     }
 
-    const userBenefit = await prisma.userBenefit.findFirst({
-      where,
-      include: {
-        usages: {
-          orderBy: { usedAt: 'desc' },
+    if (allCycles) {
+      // For spreadsheet view: get all UserBenefit records and aggregate usages
+      const userBenefits = await prisma.userBenefit.findMany({
+        where,
+        include: {
+          usages: {
+            orderBy: { usedAt: 'desc' },
+          },
+          benefit: true,
         },
-        benefit: true,
-      },
-    });
-
-    if (!userBenefit) {
-      return res.json({
-        usedAmount: 0,
-        usages: [],
-        benefit: null,
       });
-    }
 
-    res.json(userBenefit);
+      if (userBenefits.length === 0) {
+        return res.json({
+          usedAmount: 0,
+          usages: [],
+          benefit: null,
+        });
+      }
+
+      // Aggregate all usages and usedAmount from all cycles
+      const allUsages = userBenefits.flatMap(ub => ub.usages);
+      const totalUsedAmount = userBenefits.reduce((sum, ub) => sum + (ub.usedAmount || 0), 0);
+
+      return res.json({
+        ...userBenefits[0], // Use first record as base
+        usedAmount: totalUsedAmount,
+        usages: allUsages.sort((a, b) => new Date(b.usedAt).getTime() - new Date(a.usedAt).getTime()),
+      });
+    } else {
+      // For card view: get current cycle only
+      const userBenefit = await prisma.userBenefit.findFirst({
+        where,
+        include: {
+          usages: {
+            orderBy: { usedAt: 'desc' },
+          },
+          benefit: true,
+        },
+      });
+
+      if (!userBenefit) {
+        return res.json({
+          usedAmount: 0,
+          usages: [],
+          benefit: null,
+        });
+      }
+
+      return res.json(userBenefit);
+    }
   } catch (error) {
     console.error('Failed to fetch usage records:', error);
     res.status(500).json({ error: 'Failed to fetch usage records' });

@@ -1454,3 +1454,8 @@ body {
     font-size: 1rem;
   }
 }
+
+/* Spreadsheet view container */
+.spreadsheet-container {
+  overflow-x: auto;
+}

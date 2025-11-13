@@ -116,6 +116,32 @@ export function getCycleLabel(
 }
 
 /**
+ * 獲取本地時區的今天日期（YYYY-MM-DD 格式）
+ * 不使用 UTC，而是使用瀏覽器的本地時區
+ * @returns 本地時區的今天日期字串
+ */
+export function getLocalTodayDate(): string {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+/**
+ * 將 UTC 日期字串轉換為本地日期字串（YYYY-MM-DD 格式）
+ * @param dateString ISO 日期字串
+ * @returns 本地時區的日期字串
+ */
+export function formatDateForInput(dateString: string | Date): string {
+  const date = typeof dateString === 'string' ? new Date(dateString) : dateString
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+/**
  * 計算當前月份所屬的季度
  * @param month 月份 (1-12)
  * @returns 季度 (1-4)

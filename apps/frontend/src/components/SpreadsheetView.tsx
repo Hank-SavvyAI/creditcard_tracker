@@ -1,8 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useLanguageStore } from '@/store/language'
 import { calculatePeriodEnd, formatDate, getCycleLabel } from '@/lib/dateUtils'
+import { api } from '@/lib/api'
 
 interface Card {
   id: number
@@ -45,9 +47,15 @@ interface UserBenefit {
 }
 
 export default function SpreadsheetView() {
+  const router = useRouter()
   const { language } = useLanguageStore()
   const [data, setData] = useState<UserBenefit[]>([])
   const [loading, setLoading] = useState(true)
+  const [showSettingsModal, setShowSettingsModal] = useState(false)
+  const [selectedCard, setSelectedCard] = useState<Card | null>(null)
+  const [nickname, setNickname] = useState('')
+  const [afChargeMonth, setAfChargeMonth] = useState<number | ''>('')
+  const [afChargeDay, setAfChargeDay] = useState<number | ''>('')
 
   const translations = {
     'zh-TW': {
@@ -63,8 +71,10 @@ export default function SpreadsheetView() {
       cycle: '週期',
       periodEnd: '到期日',
       status: '狀態',
+      actions: '操作',
       completed: '✅ 已完成',
       inProgress: '⏳ 進行中',
+      notStarted: '⭕ 未開始',
       monthly: '每月',
       quarterly: '每季',
       yearly: '每年',
@@ -74,6 +84,11 @@ export default function SpreadsheetView() {
       usageDate: '消費日期',
       usageAmount: '消費金額',
       usageNote: '備註',
+      settings: '設定',
+      remove: '移除',
+      removeConfirm: '確定要移除此卡片的追蹤嗎？',
+      removeSuccess: '已移除追蹤',
+      removeFailed: '移除失敗',
     },
     en: {
       title: '📊 Credit Card Benefits Overview',
@@ -88,8 +103,10 @@ export default function SpreadsheetView() {
       cycle: 'Cycle',
       periodEnd: 'Period End',
       status: 'Status',
+      actions: 'Actions',
       completed: '✅ Completed',
       inProgress: '⏳ In Progress',
+      notStarted: '⭕ Not Started',
       monthly: 'Monthly',
       quarterly: 'Quarterly',
       yearly: 'Yearly',
@@ -99,6 +116,11 @@ export default function SpreadsheetView() {
       usageDate: 'Usage Date',
       usageAmount: 'Usage Amount',
       usageNote: 'Note',
+      settings: 'Settings',
+      remove: 'Remove',
+      removeConfirm: 'Are you sure you want to remove this card?',
+      removeSuccess: 'Card removed successfully',
+      removeFailed: 'Failed to remove card',
     },
   }
 
@@ -127,22 +149,25 @@ export default function SpreadsheetView() {
               ? benefit.userBenefits[0]
               : null
 
-            // Load usages for this benefit
+            // Get usages from all userBenefits (all cycles for spreadsheet view)
             let usages: BenefitUsage[] = []
-            if (benefit.amount && benefit.amount > 0) {
-              try {
-                const usageResponse = await fetch(
-                  `${process.env.NEXT_PUBLIC_API_URL}/api/benefits/${benefit.id}/usage?year=${year}`,
-                  { headers: { Authorization: `Bearer ${token}` } }
-                )
-                if (usageResponse.ok) {
-                  const usageData = await usageResponse.json()
-                  usages = usageData.usages || []
+            let aggregatedUsedAmount = 0
+
+            if (benefit.userBenefits && benefit.userBenefits.length > 0) {
+              // Aggregate usages and amounts from all cycles
+              benefit.userBenefits.forEach((ub: any) => {
+                if (ub.usages) {
+                  usages.push(...ub.usages)
                 }
-              } catch (err) {
-                console.error('Failed to load usages for benefit:', benefit.id, err)
-              }
+                aggregatedUsedAmount += ub.usedAmount || 0
+              })
+              // Sort usages by date descending
+              usages.sort((a, b) => new Date(b.usedAt).getTime() - new Date(a.usedAt).getTime())
             }
+
+            // Calculate isCompleted based on actual used amount vs total amount
+            const totalAmount = benefit.amount || 0
+            const isCompleted = totalAmount > 0 && aggregatedUsedAmount >= totalAmount
 
             allBenefits.push({
               id: userBenefit?.id || 0,
@@ -150,8 +175,8 @@ export default function SpreadsheetView() {
               year: userBenefit?.year || year,
               cycleNumber: userBenefit?.cycleNumber || null,
               periodEnd: userBenefit?.periodEnd || null,
-              isCompleted: userBenefit?.isCompleted || false,
-              usedAmount: userBenefit?.usedAmount || 0,
+              isCompleted, // Use calculated status based on actual amounts
+              usedAmount: aggregatedUsedAmount, // Use aggregated amount from API
               usages,
               benefit: {
                 id: benefit.id,
@@ -198,6 +223,77 @@ export default function SpreadsheetView() {
     return periodEnd ? formatDate(periodEnd, language) : '-'
   }
 
+  const handleCardClick = (userCardId: number) => {
+    // Switch to card view and scroll to the card
+    const url = `/dashboard?view=card&cardId=${userCardId}`
+    router.push(url)
+  }
+
+  const openCardSettings = (card: Card) => {
+    setSelectedCard(card)
+    setNickname(card.nickname || '')
+    setAfChargeMonth(card.afChargeMonth || '')
+    setAfChargeDay(card.afChargeDay || '')
+    setShowSettingsModal(true)
+  }
+
+  const closeCardSettings = () => {
+    setShowSettingsModal(false)
+    setSelectedCard(null)
+    setNickname('')
+    setAfChargeMonth('')
+    setAfChargeDay('')
+  }
+
+  const saveCardSettings = async () => {
+    if (!selectedCard) return
+
+    try {
+      await api.updateCardSettings(selectedCard.userCardId, {
+        nickname: nickname.trim() === '' ? undefined : nickname.trim(),
+        afChargeMonth: afChargeMonth === '' ? null : afChargeMonth,
+        afChargeDay: afChargeDay === '' ? null : afChargeDay,
+      })
+      alert(language === 'zh-TW' ? '設定已儲存' : 'Settings saved successfully')
+      closeCardSettings()
+      await loadData()
+    } catch (error) {
+      console.error('Failed to save card settings:', error)
+      alert(language === 'zh-TW' ? '儲存失敗' : 'Failed to save settings')
+    }
+  }
+
+  const removeCard = async (userCardId: number, cardName: string) => {
+    const confirmMessage = language === 'zh-TW'
+      ? `確定要移除「${cardName}」的追蹤嗎？`
+      : `Are you sure you want to stop tracking "${cardName}"?`
+
+    if (!confirm(confirmMessage)) {
+      return
+    }
+
+    try {
+      await api.removeCard(userCardId)
+      alert(t.removeSuccess)
+      await loadData()
+    } catch (error) {
+      console.error('Failed to remove card:', error)
+      alert(t.removeFailed)
+    }
+  }
+
+  // Generate color based on benefit status
+  const getBenefitColor = (item: UserBenefit) => {
+    // 3 colors based on benefit status
+    if (item.isCompleted) {
+      return '#E8F5E9' // Light Green - Completed
+    } else if (item.usedAmount > 0) {
+      return '#FFF9C4' // Light Yellow - In Progress
+    } else {
+      return '#E3F2FD' // Light Blue - Not Started
+    }
+  }
+
   if (loading) {
     return (
       <div style={{ padding: '2rem', textAlign: 'center' }}>
@@ -207,7 +303,7 @@ export default function SpreadsheetView() {
   }
 
   return (
-    <div style={{ padding: '1rem', overflowX: 'auto' }}>
+    <div style={{ padding: '1rem' }}>
       <h2 style={{ marginBottom: '1rem', fontSize: '1.5rem', fontWeight: 'bold' }}>
         {t.title}
       </h2>
@@ -217,19 +313,24 @@ export default function SpreadsheetView() {
           {t.noData}
         </div>
       ) : (
+        <div className="spreadsheet-container" style={{
+          border: '1px solid #dee2e6',
+          borderRadius: '8px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          WebkitOverflowScrolling: 'touch',
+        }}>
         <table style={{
           width: '100%',
           borderCollapse: 'collapse',
           backgroundColor: 'white',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-          fontSize: '0.9rem',
+          fontSize: '0.75rem',
         }}>
           <thead>
             <tr style={{
               backgroundColor: '#f8f9fa',
               borderBottom: '2px solid #dee2e6',
             }}>
-              <th style={headerCellStyle}>{t.cardName}</th>
+              <th style={{ ...headerCellStyle, ...stickyColumnStyle, zIndex: 11 }}>{t.cardName}</th>
               <th style={headerCellStyle}>{t.issuer}</th>
               <th style={headerCellStyle}>{t.annualFee}</th>
               <th style={headerCellStyle}>{t.afChargeDate}</th>
@@ -270,21 +371,78 @@ export default function SpreadsheetView() {
                     return sum + 1 + (b.usages?.length || 0)
                   }, 0)
 
+                  const benefitColor = getBenefitColor(item)
+
                   rows.push(
                     <tr key={item.id} style={{ borderBottom: item.usages && item.usages.length > 0 ? 'none' : '1px solid #dee2e6' }}>
                       {benefitIndex === 0 && (
                         <>
-                          <td style={{ ...rowStyle, verticalAlign: 'top', fontWeight: '600' }} rowSpan={totalCardRows}>
-                            {item.benefit.card.name || '-'}
-                            {item.benefit.card.nickname ? (
-                              <span style={{ fontSize: '0.85rem', color: '#3b82f6', marginLeft: '0.5rem', fontWeight: '500' }}>
-                                🏷️ {item.benefit.card.nickname}
-                              </span>
-                            ) : item.benefit.card.cardInstance && item.benefit.card.cardInstance > 1 && (
-                              <span style={{ fontSize: '0.85rem', color: '#6b7280', marginLeft: '0.5rem' }}>
-                                ({language === 'zh-TW' ? '卡片' : 'Card'} {item.benefit.card.cardInstance})
-                              </span>
-                            )}
+                          <td
+                            style={{
+                              ...rowStyle,
+                              ...stickyColumnStyle,
+                              verticalAlign: 'top',
+                            }}
+                            rowSpan={totalCardRows}
+                          >
+                            <div>
+                              <div
+                                style={{
+                                  fontWeight: '600',
+                                  cursor: 'pointer',
+                                  color: '#3b82f6',
+                                  textDecoration: 'underline',
+                                  marginBottom: '0.5rem'
+                                }}
+                                onClick={() => handleCardClick(item.benefit.card.userCardId)}
+                              >
+                                {item.benefit.card.name || '-'}
+                                {!item.benefit.card.nickname && item.benefit.card.cardInstance && item.benefit.card.cardInstance > 1 && (
+                                  <span style={{ fontSize: '0.75rem', color: '#6b7280', marginLeft: '0.5rem' }}>
+                                    ({language === 'zh-TW' ? '卡片' : 'Card'} {item.benefit.card.cardInstance})
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center' }}>
+                                {item.benefit.card.nickname && (
+                                  <span style={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: '500' }}>
+                                    🏷️ {item.benefit.card.nickname}
+                                  </span>
+                                )}
+                                <div style={{ display: 'flex', gap: '0.5rem', marginLeft: 'auto' }}>
+                                  <button
+                                    onClick={() => openCardSettings(item.benefit.card)}
+                                    style={{
+                                      padding: '0.25rem 0.5rem',
+                                      fontSize: '0.7rem',
+                                      background: '#6b7280',
+                                      color: 'white',
+                                      border: 'none',
+                                      borderRadius: '4px',
+                                      cursor: 'pointer',
+                                      whiteSpace: 'nowrap'
+                                    }}
+                                  >
+                                    ⚙️ {t.settings}
+                                  </button>
+                                  <button
+                                    onClick={() => removeCard(item.benefit.card.userCardId, item.benefit.card.name)}
+                                    style={{
+                                      padding: '0.25rem 0.5rem',
+                                      fontSize: '0.7rem',
+                                      background: '#ef4444',
+                                      color: 'white',
+                                      border: 'none',
+                                      borderRadius: '4px',
+                                      cursor: 'pointer',
+                                      whiteSpace: 'nowrap'
+                                    }}
+                                  >
+                                    🗑️ {t.remove}
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
                           </td>
                           <td style={{ ...rowStyle, verticalAlign: 'top' }} rowSpan={totalCardRows}>
                             {item.benefit.card.issuer || '-'}
@@ -299,7 +457,7 @@ export default function SpreadsheetView() {
                           </td>
                         </>
                       )}
-                      <td style={rowStyle}>{item.benefit.name || '-'}</td>
+                      <td style={{ ...rowStyle, backgroundColor: benefitColor }}>{item.benefit.name || '-'}</td>
                       <td style={{ ...rowStyle, textAlign: 'right' }}>
                         {item.benefit.totalAmount != null
                           ? `${item.benefit.currency || ''} ${item.benefit.totalAmount.toFixed(2)}`
@@ -313,7 +471,11 @@ export default function SpreadsheetView() {
                       </td>
                       <td style={rowStyle}>{getCycleLabel(item.benefit.cycleType, language)}</td>
                       <td style={rowStyle}>{formatPeriodEnd(item)}</td>
-                      <td style={{ ...rowStyle, color: item.isCompleted ? '#28a745' : '#fd7e14', fontWeight: '600' }}>
+                      <td style={{
+                        ...rowStyle,
+                        color: item.isCompleted ? '#2e7d32' : (item.usedAmount > 0 ? '#e65100' : '#1565c0'),
+                        fontWeight: '600'
+                      }}>
                         {item.isCompleted ? t.completed : t.inProgress}
                       </td>
                     </tr>
@@ -325,24 +487,26 @@ export default function SpreadsheetView() {
                       const isLastUsage = usageIndex === item.usages!.length - 1
                       const usageRowStyle = {
                         ...bodyCellStyle,
-                        backgroundColor: globalIndex % 2 === 0 ? '#f8f9fa' : 'white',
+                        backgroundColor: benefitColor,
                         fontSize: '0.85rem',
                         color: '#6c757d',
                         paddingLeft: '2rem',
                       }
 
+                      const borderStyle = isLastUsage ? '1px solid #dee2e6' : '1px solid #e9ecef'
+
                       rows.push(
-                        <tr key={`${item.id}-usage-${usage.id}`} style={{ borderBottom: isLastUsage ? '1px solid #dee2e6' : '1px solid #e9ecef' }}>
-                          <td style={usageRowStyle} colSpan={1}>
+                        <tr key={`${item.id}-usage-${usage.id}`}>
+                          {/* Usage row spans across benefit columns only (card columns use rowSpan) */}
+                          <td style={{ ...usageRowStyle, backgroundColor: benefitColor, borderBottom: borderStyle }} colSpan={2}>
                             └─ {new Date(usage.usedAt).toLocaleDateString()}
                           </td>
-                          <td style={{ ...usageRowStyle, textAlign: 'right' }} colSpan={1}>
+                          <td style={{ ...usageRowStyle, textAlign: 'right', backgroundColor: benefitColor, borderBottom: borderStyle }} colSpan={1}>
                             {item.benefit.currency} {usage.amount.toFixed(2)}
                           </td>
-                          <td style={usageRowStyle} colSpan={1}>
+                          <td style={{ ...usageRowStyle, backgroundColor: benefitColor, borderBottom: borderStyle }} colSpan={4}>
                             {usage.note || '-'}
                           </td>
-                          <td style={usageRowStyle} colSpan={4}></td>
                         </tr>
                       )
                     })
@@ -356,23 +520,160 @@ export default function SpreadsheetView() {
             })()}
           </tbody>
         </table>
+        </div>
+      )}
+
+      {/* Card Settings Modal */}
+      {showSettingsModal && selectedCard && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white',
+            padding: '2rem',
+            borderRadius: '12px',
+            width: '90%',
+            maxWidth: '500px',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+          }}>
+            <h2 style={{ marginBottom: '1rem', color: 'var(--primary-color)' }}>
+              📅 {language === 'zh-TW' ? '年費與卡片暱稱設定' : 'Card Settings'}
+            </h2>
+            <p style={{ marginBottom: '1.5rem', color: '#6b7280', fontSize: '0.9rem' }}>
+              {language === 'zh-TW'
+                ? `設定「${selectedCard.name}」的暱稱和年費收取日期`
+                : `Set nickname and annual fee charge date for "${selectedCard.name}"`}
+            </p>
+
+            {/* Nickname */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#374151' }}>
+                🏷️ {language === 'zh-TW' ? '卡片暱稱' : 'Card Nickname'}
+              </label>
+              <input
+                type="text"
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                placeholder={language === 'zh-TW' ? '輸入自訂暱稱（可選）' : 'Enter nickname (optional)'}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '8px',
+                  fontSize: '1rem',
+                }}
+              />
+            </div>
+
+            {/* Annual Fee Charge Date */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#374151' }}>
+                📅 {language === 'zh-TW' ? '年費收取日期' : 'Annual Fee Charge Date'}
+              </label>
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <input
+                  type="number"
+                  min="1"
+                  max="12"
+                  value={afChargeMonth}
+                  onChange={(e) => setAfChargeMonth(e.target.value === '' ? '' : parseInt(e.target.value))}
+                  placeholder={language === 'zh-TW' ? '月' : 'Month'}
+                  style={{
+                    flex: 1,
+                    padding: '0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '8px',
+                    fontSize: '1rem',
+                  }}
+                />
+                <input
+                  type="number"
+                  min="1"
+                  max="31"
+                  value={afChargeDay}
+                  onChange={(e) => setAfChargeDay(e.target.value === '' ? '' : parseInt(e.target.value))}
+                  placeholder={language === 'zh-TW' ? '日' : 'Day'}
+                  style={{
+                    flex: 1,
+                    padding: '0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '8px',
+                    fontSize: '1rem',
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Buttons */}
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+              <button
+                onClick={closeCardSettings}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  background: '#e5e7eb',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: '500',
+                  color: '#374151'
+                }}
+              >
+                {language === 'zh-TW' ? '取消' : 'Cancel'}
+              </button>
+              <button
+                onClick={saveCardSettings}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  background: 'var(--primary-color)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: '500',
+                }}
+              >
+                {language === 'zh-TW' ? '儲存' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
 }
 
 const headerCellStyle: React.CSSProperties = {
-  padding: '0.75rem',
+  padding: '0.4rem 0.5rem',
   textAlign: 'left',
   fontWeight: '600',
-  fontSize: '0.85rem',
+  fontSize: '0.7rem',
   color: '#495057',
   borderRight: '1px solid #dee2e6',
   whiteSpace: 'nowrap',
+  position: 'sticky',
+  top: 0,
+  backgroundColor: '#f8f9fa',
+  zIndex: 10,
+}
+
+const stickyColumnStyle: React.CSSProperties = {
+  position: 'sticky',
+  left: 0,
+  backgroundColor: 'white',
+  zIndex: 5,
 }
 
 const bodyCellStyle: React.CSSProperties = {
-  padding: '0.75rem',
+  padding: '0.4rem 0.5rem',
   borderRight: '1px solid #dee2e6',
   whiteSpace: 'nowrap',
 }
