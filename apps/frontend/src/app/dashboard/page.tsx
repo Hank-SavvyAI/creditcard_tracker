@@ -26,7 +26,7 @@ export default function Dashboard() {
   const [showCustomBenefitModal, setShowCustomBenefitModal] = useState(false)
   const [customBenefitCard, setCustomBenefitCard] = useState<any>(null)
   const [customAmount, setCustomAmount] = useState<number | ''>('')
-  const [customCurrency, setCustomCurrency] = useState('TWD')
+  const [customCurrency, setCustomCurrency] = useState('USD')
   const [customPeriodEnd, setCustomPeriodEnd] = useState('')
   const year = new Date().getFullYear()
 
@@ -141,7 +141,7 @@ export default function Dashboard() {
   function openCustomBenefitModal(userCard: any) {
     setCustomBenefitCard(userCard)
     setCustomAmount('')
-    setCustomCurrency(userCard.card.currency || 'TWD')
+    setCustomCurrency('USD')
     // Set default period end to 1 year from now
     const defaultDate = new Date()
     defaultDate.setFullYear(defaultDate.getFullYear() + 1)
@@ -153,7 +153,7 @@ export default function Dashboard() {
     setShowCustomBenefitModal(false)
     setCustomBenefitCard(null)
     setCustomAmount('')
-    setCustomCurrency('TWD')
+    setCustomCurrency('USD')
     setCustomPeriodEnd('')
   }
 

@@ -351,40 +351,42 @@ export default function SpreadsheetView() {
               style={{
                 backgroundColor: 'rgba(255, 255, 255, 0.95)',
                 border: '2px solid #3b82f6',
-                borderRadius: '6px',
-                padding: '0.4rem 0.8rem',
+                borderRadius: '50%',
+                width: '36px',
+                height: '36px',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '0.9rem',
+                fontSize: '1.2rem',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
                 color: '#3b82f6',
                 fontWeight: '600',
               }}
               aria-label="Scroll to left"
             >
-              ← {language === 'zh-TW' ? '最左側' : 'Left'}
+              ←
             </button>
             <button
               onClick={scrollToRight}
               style={{
                 backgroundColor: 'rgba(255, 255, 255, 0.95)',
                 border: '2px solid #3b82f6',
-                borderRadius: '6px',
-                padding: '0.4rem 0.8rem',
+                borderRadius: '50%',
+                width: '36px',
+                height: '36px',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '0.9rem',
+                fontSize: '1.2rem',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
                 color: '#3b82f6',
                 fontWeight: '600',
               }}
               aria-label="Scroll to right"
             >
-              {language === 'zh-TW' ? '最右側' : 'Right'} →
+              →
             </button>
           </div>
           <div
@@ -408,7 +410,7 @@ export default function SpreadsheetView() {
               backgroundColor: '#f8f9fa',
               borderBottom: '2px solid #dee2e6',
             }}>
-              <th style={{ ...headerCellStyle, ...stickyColumnStyle, zIndex: 11 }}>{t.cardName}</th>
+              <th style={headerCellStyle}>{t.cardName}</th>
               <th style={headerCellStyle}>{t.issuer}</th>
               <th style={headerCellStyle}>{t.annualFee}</th>
               <th style={headerCellStyle}>{t.afChargeDate}</th>
@@ -458,7 +460,6 @@ export default function SpreadsheetView() {
                           <td
                             style={{
                               ...rowStyle,
-                              ...stickyColumnStyle,
                               verticalAlign: 'top',
                             }}
                             rowSpan={totalCardRows}
@@ -741,17 +742,7 @@ const headerCellStyle: React.CSSProperties = {
   color: '#495057',
   borderRight: '1px solid #dee2e6',
   whiteSpace: 'nowrap',
-  position: 'sticky',
-  top: 0,
   backgroundColor: '#f8f9fa',
-  zIndex: 10,
-}
-
-const stickyColumnStyle: React.CSSProperties = {
-  position: 'sticky',
-  left: 0,
-  backgroundColor: 'white',
-  zIndex: 5,
 }
 
 const bodyCellStyle: React.CSSProperties = {
