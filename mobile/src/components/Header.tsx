@@ -72,7 +72,7 @@ export default function Header() {
     <header style={{
       background: 'var(--background-card)',
       borderBottom: '1px solid var(--border-color)',
-      padding: '1rem 2rem',
+      padding: '0.75rem 1rem',
       position: 'sticky',
       top: 0,
       zIndex: 50,
@@ -85,26 +85,30 @@ export default function Header() {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
+        gap: '0.5rem',
       }}>
         {/* Logo / Title */}
-        <div className="header-left" style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-          <Link href="/" style={{ textDecoration: 'none' }}>
+        <div className="header-left" style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: '1', minWidth: 0 }}>
+          <Link href="/" style={{ textDecoration: 'none', flexShrink: 0 }}>
             <h1 style={{
               margin: 0,
-              fontSize: '1.5rem',
+              fontSize: '1.1rem',
               fontWeight: 'bold',
               color: 'var(--primary-color)',
+              whiteSpace: 'nowrap',
             }}>
-              💳 {language === 'zh-TW' ? '信用卡福利追蹤' : 'Credit Card Tracker'}
+              💳 {language === 'zh-TW' ? '信用卡' : 'CC'}
             </h1>
           </Link>
 
           {/* Navigation Links */}
-          <nav style={{ display: 'flex', gap: '1.5rem' }}>
+          <nav style={{ display: 'flex', gap: '0.75rem', overflow: 'hidden' }}>
             <Link href="/" style={{
               textDecoration: 'none',
               color: 'var(--foreground)',
               fontWeight: pathname === '/' ? 'bold' : 'normal',
+              fontSize: '0.9rem',
+              whiteSpace: 'nowrap',
             }}>
               {language === 'zh-TW' ? '首頁' : 'Home'}
             </Link>
@@ -112,27 +116,31 @@ export default function Header() {
               textDecoration: 'none',
               color: 'var(--foreground)',
               fontWeight: pathname === '/cards' ? 'bold' : 'normal',
+              fontSize: '0.9rem',
+              whiteSpace: 'nowrap',
             }}>
-              {language === 'zh-TW' ? '新增信用卡' : 'Add Card'}
+              {language === 'zh-TW' ? '新增' : 'Add'}
             </Link>
             {isMounted && user && (
               <Link href="/dashboard" style={{
                 textDecoration: 'none',
                 color: 'var(--foreground)',
                 fontWeight: pathname === '/dashboard' ? 'bold' : 'normal',
+                fontSize: '0.9rem',
+                whiteSpace: 'nowrap',
               }}>
-                {language === 'zh-TW' ? '我的卡片' : 'My Cards'}
+                {language === 'zh-TW' ? '卡片' : 'Cards'}
               </Link>
             )}
           </nav>
         </div>
 
         {/* Right Side: Language Switcher + User Info */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
           <LanguageSwitcher />
 
           {!isMounted ? (
-            <div style={{ width: '100px', height: '40px' }}></div>
+            <div style={{ width: '80px', height: '36px' }}></div>
           ) : user ? (
             <div style={{ position: 'relative' }}>
               <button
@@ -140,19 +148,27 @@ export default function Header() {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.5rem 1rem',
+                  gap: '0.3rem',
+                  padding: '0.4rem 0.7rem',
                   background: 'var(--background)',
                   border: '1px solid var(--border-color)',
                   borderRadius: '8px',
                   cursor: 'pointer',
                   color: 'var(--foreground)',
                   fontWeight: '500',
+                  fontSize: '0.85rem',
                 }}
               >
-                <span>👤</span>
-                <span>{user.username || user.firstName || 'User'}</span>
-                <span style={{ fontSize: '0.8rem' }}>▼</span>
+                <span style={{ fontSize: '1rem' }}>👤</span>
+                <span style={{
+                  maxWidth: '60px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}>
+                  {user.username || user.firstName || 'User'}
+                </span>
+                <span style={{ fontSize: '0.7rem' }}>▼</span>
               </button>
 
               {showDropdown && (
@@ -207,13 +223,15 @@ export default function Header() {
             <button
               onClick={handleLogin}
               style={{
-                padding: '0.5rem 1.5rem',
+                padding: '0.4rem 1rem',
                 background: 'var(--primary-color)',
                 color: 'white',
                 border: 'none',
                 borderRadius: '8px',
                 cursor: 'pointer',
                 fontWeight: '500',
+                fontSize: '0.85rem',
+                whiteSpace: 'nowrap',
               }}
             >
               {language === 'zh-TW' ? '登入' : 'Login'}
