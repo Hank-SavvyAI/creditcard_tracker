@@ -482,13 +482,13 @@ export default function SpreadsheetView() {
                                   </span>
                                 )}
                               </div>
-                              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                 {item.benefit.card.nickname && (
                                   <span style={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: '500' }}>
                                     🏷️ {item.benefit.card.nickname}
                                   </span>
                                 )}
-                                <div style={{ display: 'flex', gap: '0.5rem', marginLeft: 'auto' }}>
+                                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-start' }}>
                                   <button
                                     onClick={() => openCardSettings(item.benefit.card)}
                                     style={{
