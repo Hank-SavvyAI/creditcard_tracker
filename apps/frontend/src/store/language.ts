@@ -83,7 +83,7 @@ export const translations = {
 
     // Dashboard
     'dashboard.title': '我的信用卡福利',
-    'dashboard.empty': '您還沒有新增任何信用卡，請先使用 Telegram Bot 新增信用卡',
+    'dashboard.empty': '您還沒有新增任何信用卡，請先點選上方新增信用卡',
     'dashboard.admin': '管理員後台',
 
     // Cards
@@ -170,7 +170,7 @@ export const translations = {
 
     // Dashboard
     'dashboard.title': 'My Card Benefits',
-    'dashboard.empty': 'No cards yet. Please add cards via Telegram Bot',
+    'dashboard.empty': 'No cards yet. Please add cards via Add Card button above',
     'dashboard.admin': 'Admin Panel',
 
     // Cards

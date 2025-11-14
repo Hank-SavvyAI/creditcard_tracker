@@ -196,7 +196,7 @@ export const translations = {
 
     // Dashboard
     'dashboard.title': 'My Card Benefits',
-    'dashboard.empty': 'No cards yet. Please add cards via Telegram Bot',
+    'dashboard.empty': 'No cards yet. Please add cards via Add Card button above',
     'dashboard.admin': 'Admin Panel',
 
     // Cards
