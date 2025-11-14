@@ -1560,9 +1560,3 @@ body {
 .spreadsheet-container {
   overflow-x: auto;
 }
-
-@media (max-width: 735px) {
-  .spreadsheet-container {
-    max-width: 50vw;
-  }
-}
