@@ -593,6 +593,15 @@ body {
   transition: all 0.2s ease;
 }
 
+/* Navigation link text variants */
+.nav-full {
+  display: inline;
+}
+
+.nav-short {
+  display: none;
+}
+
 .lang-btn:hover {
   background: var(--hover-overlay);
   color: var(--primary-color);
@@ -1452,6 +1461,98 @@ body {
 
   header .header-left nav a {
     font-size: 1rem;
+  }
+}
+
+/* ===== Tablet/Small Screen Responsive (<735px) ===== */
+@media (max-width: 735px) {
+  /* Header adjustments */
+  header {
+    padding: 0.75rem 1rem !important;
+  }
+
+  .header-left {
+    gap: 0.75rem !important;
+  }
+
+  /* Smaller logo */
+  .header-left img.header-logo {
+    height: 35px !important;
+    width: 70px !important;
+  }
+
+  /* Smaller title */
+  .header-title {
+    font-size: 1.1rem !important;
+  }
+
+  /* Use shorter title */
+  .header-title-short {
+    display: inline !important;
+  }
+
+  .header-title-full {
+    display: none !important;
+  }
+
+  /* Navigation: show short text */
+  .nav-full {
+    display: none !important;
+  }
+
+  .nav-short {
+    display: inline !important;
+  }
+
+  .header-nav {
+    gap: 0.75rem !important;
+    font-size: 0.9rem !important;
+  }
+
+  /* Language switcher smaller */
+  .language-switcher {
+    gap: 0.25rem !important;
+    padding: 3px !important;
+    border-radius: 8px !important;
+    border-width: 1.5px !important;
+  }
+
+  .lang-btn {
+    padding: 4px 10px !important;
+    border-radius: 6px !important;
+    font-size: 0.75rem !important;
+  }
+
+  /* User button smaller */
+  header button {
+    padding: 0.35rem 0.6rem !important;
+    font-size: 0.75rem !important;
+    gap: 0.25rem !important;
+  }
+
+  header button span:not([style*="fontSize"]):not([style*="font-size"]) {
+    font-size: 0.75rem !important;
+  }
+
+  /* User button emoji size */
+  header .user-button span:first-child {
+    font-size: 0.9rem !important;
+  }
+
+  /* User name max width */
+  header .user-name {
+    max-width: 50px !important;
+  }
+
+  /* Dropdown arrow size */
+  header .user-button span:last-child {
+    font-size: 0.65rem !important;
+  }
+
+  /* Placeholder for login button */
+  .header-right > div[style*="width"] {
+    width: 70px !important;
+    height: 32px !important;
   }
 }
 

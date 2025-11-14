@@ -103,6 +103,7 @@ export default function Header() {
             <img
               src="/images/savvyai-logo.png"
               alt="SavvyAI Logo"
+              className="header-logo"
               style={{
                 height: '50px',
                 width: '100px',
@@ -117,7 +118,7 @@ export default function Header() {
 
           {/* Title */}
           <Link href="/" style={{ textDecoration: 'none' }}>
-            <h1 style={{
+            <h1 className="header-title" style={{
               margin: 0,
               fontSize: '1.5rem',
               fontWeight: 'bold',
@@ -128,12 +129,12 @@ export default function Header() {
             }}>
               <span className="header-icon">💳</span>
               <span className="header-title-full">{language === 'zh-TW' ? '信用卡福利追蹤' : 'Credit Card Tracker'}</span>
-              <span className="header-title-short">{language === 'zh-TW' ? '福利追蹤' : 'Tracker'}</span>
+              <span className="header-title-short">{language === 'zh-TW' ? '信用卡' : 'CC'}</span>
             </h1>
           </Link>
 
           {/* Navigation Links */}
-          <nav style={{ display: 'flex', gap: '1.5rem' }}>
+          <nav className="header-nav" style={{ display: 'flex', gap: '1.5rem' }}>
             <Link href="/" style={{
               textDecoration: 'none',
               color: 'var(--foreground)',
@@ -141,27 +142,29 @@ export default function Header() {
             }}>
               {language === 'zh-TW' ? '首頁' : 'Home'}
             </Link>
-            <Link href="/cards" style={{
+            <Link href="/cards" className="nav-link-cards" style={{
               textDecoration: 'none',
               color: 'var(--foreground)',
               fontWeight: pathname === '/cards' ? 'bold' : 'normal',
             }}>
-              {language === 'zh-TW' ? '新增信用卡' : 'Add Card'}
+              <span className="nav-full">{language === 'zh-TW' ? '新增信用卡' : 'Add Card'}</span>
+              <span className="nav-short">{language === 'zh-TW' ? '新增' : 'Add'}</span>
             </Link>
             {isMounted && user && (
-              <Link href="/dashboard" style={{
+              <Link href="/dashboard" className="nav-link-dashboard" style={{
                 textDecoration: 'none',
                 color: 'var(--foreground)',
                 fontWeight: pathname === '/dashboard' ? 'bold' : 'normal',
               }}>
-                {language === 'zh-TW' ? '我的卡片' : 'My Cards'}
+                <span className="nav-full">{language === 'zh-TW' ? '我的卡片' : 'My Cards'}</span>
+                <span className="nav-short">{language === 'zh-TW' ? '卡片' : 'Cards'}</span>
               </Link>
             )}
           </nav>
         </div>
 
         {/* Right Side: Language Switcher + User Info */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div className="header-right" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <LanguageSwitcher />
 
           {!isMounted ? (
@@ -170,6 +173,7 @@ export default function Header() {
             <div style={{ position: 'relative' }}>
               <button
                 onClick={() => setShowDropdown(!showDropdown)}
+                className="user-button"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -183,8 +187,15 @@ export default function Header() {
                   fontWeight: '500',
                 }}
               >
-                <span>👤</span>
-                <span>{user.username || user.firstName || 'User'}</span>
+                <span style={{ fontSize: '1rem' }}>👤</span>
+                <span className="user-name" style={{
+                  maxWidth: '80px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}>
+                  {user.username || user.firstName || 'User'}
+                </span>
                 <span style={{ fontSize: '0.8rem' }}>▼</span>
               </button>
 
