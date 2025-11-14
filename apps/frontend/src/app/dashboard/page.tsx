@@ -356,7 +356,7 @@ export default function Dashboard() {
                         e.currentTarget.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
                       }}
                     >
-                      🎁 {language === 'zh-TW' ? '新增自訂福利' : 'Add Custom Benefit'}
+                      🎁 {language === 'zh-TW' ? '新增開/續卡禮' : 'Add Open/Retention Offer'}
                     </button>
                     <button
                       onClick={() => removeCard(userCard.id, language === 'zh-TW' ? userCard.card.name : (userCard.card.nameEn || userCard.card.name))}

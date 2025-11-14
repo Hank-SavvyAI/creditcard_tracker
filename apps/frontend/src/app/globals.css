@@ -1566,6 +1566,8 @@ body {
   .spreadsheet-container table tbody td:first-child,
   .spreadsheet-container table thead th:first-child {
     max-width: 50vw;
-    overflow: hidden;
+    white-space: normal !important;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
   }
 }
