@@ -19,13 +19,45 @@ interface NotificationData {
   body: string;
   benefitId?: number;
   data?: any;
+  notificationType?: string; // "benefit-expiration" | "benefit-reminder" | "system" | "test"
+}
+
+/**
+ * 記錄通知到資料庫
+ */
+async function logNotification(
+  userId: number,
+  channel: string,
+  status: string,
+  title: string,
+  body: string,
+  notificationType: string = 'system',
+  errorMessage?: string,
+  metadata?: any
+) {
+  try {
+    await prisma.notificationLog.create({
+      data: {
+        userId,
+        channel,
+        status,
+        title,
+        body,
+        notificationType,
+        errorMessage,
+        metadata: metadata ? JSON.stringify(metadata) : null,
+      },
+    });
+  } catch (error) {
+    console.error('Failed to log notification:', error);
+  }
 }
 
 /**
  * 發送通知給使用者（自動選擇可用的通知方式）
  */
 export async function sendNotification(notificationData: NotificationData) {
-  const { userId, title, body, data } = notificationData;
+  const { userId, title, body, data, notificationType = 'system' } = notificationData;
 
   try {
     // 取得使用者資訊
@@ -54,10 +86,12 @@ export async function sendNotification(notificationData: NotificationData) {
       try {
         await sendTelegramNotification(user.telegramId, userId, title, body);
         results.telegram = true;
+        await logNotification(userId, 'telegram', 'SUCCESS', title, body, notificationType, undefined, data);
         console.log(`✅ Telegram notification sent to user ${userId}`);
       } catch (error: any) {
         console.error(`❌ Telegram notification failed for user ${userId}:`, error.message);
         results.errors.push(`Telegram: ${error.message}`);
+        await logNotification(userId, 'telegram', 'FAILED', title, body, notificationType, error.message, data);
       }
     }
 
@@ -66,10 +100,12 @@ export async function sendNotification(notificationData: NotificationData) {
       try {
         await sendLineNotification(user.lineId, title, body);
         results.line = true;
+        await logNotification(userId, 'line', 'SUCCESS', title, body, notificationType, undefined, data);
         console.log(`✅ LINE notification sent to user ${userId}`);
       } catch (error: any) {
         console.error(`❌ LINE notification failed for user ${userId}:`, error.message);
         results.errors.push(`LINE: ${error.message}`);
+        await logNotification(userId, 'line', 'FAILED', title, body, notificationType, error.message, data);
       }
     }
 
@@ -78,18 +114,25 @@ export async function sendNotification(notificationData: NotificationData) {
       try {
         await sendEmailNotification(user.email, user.firstName || user.username || 'User', title, body);
         results.email = true;
+        await logNotification(userId, 'email', 'SUCCESS', title, body, notificationType, undefined, data);
         console.log(`✅ Email notification sent to user ${userId}`);
       } catch (error: any) {
         console.error(`❌ Email notification failed for user ${userId}:`, error.message);
         results.errors.push(`Email: ${error.message}`);
+        await logNotification(userId, 'email', 'FAILED', title, body, notificationType, error.message, data);
       }
     }
 
-    // 3. 發送 Web Push 通知（如果有訂閱）
+    // 4. 發送 Web Push 通知（如果有訂閱）
     if (user.pushSubscriptions && user.pushSubscriptions.length > 0) {
       try {
         const pushResults = await sendWebPushNotification(user.pushSubscriptions, title, body, data);
         results.webPush = pushResults.success;
+        if (pushResults.success) {
+          await logNotification(userId, 'webpush', 'SUCCESS', title, body, notificationType, undefined, { ...data, successCount: pushResults.successCount, totalSubscriptions: user.pushSubscriptions.length });
+        } else {
+          await logNotification(userId, 'webpush', 'FAILED', title, body, notificationType, pushResults.error, data);
+        }
         if (!pushResults.success && pushResults.error) {
           results.errors.push(`Web Push: ${pushResults.error}`);
         }
@@ -97,6 +140,7 @@ export async function sendNotification(notificationData: NotificationData) {
       } catch (error: any) {
         console.error(`❌ Web Push notification failed for user ${userId}:`, error.message);
         results.errors.push(`Web Push: ${error.message}`);
+        await logNotification(userId, 'webpush', 'FAILED', title, body, notificationType, error.message, data);
       }
     }
 

@@ -123,12 +123,15 @@ export default function AdminPage() {
     <div className="dashboard">
       <div className="dashboard-header">
         <h1>🔧 管理員後台</h1>
-        <div style={{ display: 'flex', gap: '1rem' }}>
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
           <Link href="/dashboard" className="btn btn-secondary">
             返回儀表板
           </Link>
           <Link href="/admin/users" className="btn btn-secondary">
             👥 用戶管理
+          </Link>
+          <Link href="/admin/stats" className="btn btn-secondary">
+            📊 系統統計
           </Link>
           <button onClick={handleLogout} className="btn btn-secondary">
             登出

@@ -174,6 +174,7 @@ router.get('/my', authenticate, async (req: AuthRequest, res) => {
     // Fix the userBenefits for each card to only show benefits for that specific UserCard
     const fixedUserCards = await Promise.all(
       userCards.map(async (userCard) => {
+        // Get regular card benefits
         const benefits = await Promise.all(
           userCard.card.benefits.map(async (benefit) => {
             const userBenefits = await prisma.userBenefit.findMany({
@@ -197,11 +198,50 @@ router.get('/my', authenticate, async (req: AuthRequest, res) => {
           })
         );
 
+        // Get custom benefits for this card
+        const customUserBenefits = await prisma.userBenefit.findMany({
+          where: {
+            userCardId: userCard.id,
+            userId: req.user!.id,
+            isCustom: true,
+          },
+          include: {
+            usages: {
+              orderBy: {
+                usedAt: 'desc'
+              }
+            }
+          }
+        });
+
+        // Transform custom benefits to match the Benefit structure
+        const customBenefits = customUserBenefits.map((ub) => ({
+          id: ub.id, // Use userBenefit id as benefit id for custom benefits
+          title: ub.customTitle || 'Custom Benefit',
+          titleEn: ub.customTitleEn || ub.customTitle || 'Custom Benefit',
+          category: 'Custom',
+          categoryEn: 'Custom',
+          amount: ub.customAmount || 0,
+          currency: ub.customCurrency || 'USD',
+          frequency: null,
+          reminderDays: 30,
+          endMonth: null,
+          endDay: null,
+          cardId: userCard.card.id,
+          isActive: true,
+          createdAt: ub.createdAt,
+          updatedAt: ub.updatedAt,
+          userBenefits: [ub], // Include the custom userBenefit itself
+        }));
+
+        // Combine regular and custom benefits
+        const allBenefits = [...benefits, ...customBenefits];
+
         return {
           ...userCard,
           card: {
             ...userCard.card,
-            benefits,
+            benefits: allBenefits,
           },
         };
       })
@@ -220,12 +260,28 @@ router.post('/:benefitId/complete', authenticate, async (req: AuthRequest, res) 
     const { year, notes, userCardId } = req.body;
     const currentYear = year || new Date().getFullYear();
 
-    const userBenefit = await findOrCreateUserBenefit(
-      req.user!.id,
-      parseInt(benefitId),
-      currentYear,
-      userCardId
-    );
+    // Check if this is a custom benefit (benefitId is actually userBenefit.id)
+    const existingUserBenefit = await prisma.userBenefit.findFirst({
+      where: {
+        id: parseInt(benefitId),
+        userId: req.user!.id,
+        isCustom: true,
+      },
+    });
+
+    let userBenefit;
+    if (existingUserBenefit) {
+      // This is a custom benefit, update it directly
+      userBenefit = existingUserBenefit;
+    } else {
+      // This is a regular benefit, find or create userBenefit
+      userBenefit = await findOrCreateUserBenefit(
+        req.user!.id,
+        parseInt(benefitId),
+        currentYear,
+        userCardId
+      );
+    }
 
     const updated = await prisma.userBenefit.update({
       where: { id: userBenefit.id },
@@ -250,12 +306,28 @@ router.post('/:benefitId/uncomplete', authenticate, async (req: AuthRequest, res
     const { year, userCardId } = req.body;
     const currentYear = year || new Date().getFullYear();
 
-    const userBenefit = await findOrCreateUserBenefit(
-      req.user!.id,
-      parseInt(benefitId),
-      currentYear,
-      userCardId
-    );
+    // Check if this is a custom benefit (benefitId is actually userBenefit.id)
+    const existingUserBenefit = await prisma.userBenefit.findFirst({
+      where: {
+        id: parseInt(benefitId),
+        userId: req.user!.id,
+        isCustom: true,
+      },
+    });
+
+    let userBenefit;
+    if (existingUserBenefit) {
+      // This is a custom benefit, update it directly
+      userBenefit = existingUserBenefit;
+    } else {
+      // This is a regular benefit, find or create userBenefit
+      userBenefit = await findOrCreateUserBenefit(
+        req.user!.id,
+        parseInt(benefitId),
+        currentYear,
+        userCardId
+      );
+    }
 
     const updated = await prisma.userBenefit.update({
       where: { id: userBenefit.id },
@@ -279,12 +351,26 @@ router.patch('/:benefitId/settings', authenticate, async (req: AuthRequest, res)
     const { year, reminderDays, notificationEnabled, userCardId } = req.body;
     const currentYear = year || new Date().getFullYear();
 
-    const userBenefit = await findOrCreateUserBenefit(
-      req.user!.id,
-      parseInt(benefitId),
-      currentYear,
-      userCardId
-    );
+    // Check if this is a custom benefit
+    const existingUserBenefit = await prisma.userBenefit.findFirst({
+      where: {
+        id: parseInt(benefitId),
+        userId: req.user!.id,
+        isCustom: true,
+      },
+    });
+
+    let userBenefit;
+    if (existingUserBenefit) {
+      userBenefit = existingUserBenefit;
+    } else {
+      userBenefit = await findOrCreateUserBenefit(
+        req.user!.id,
+        parseInt(benefitId),
+        currentYear,
+        userCardId
+      );
+    }
 
     const updated = await prisma.userBenefit.update({
       where: { id: userBenefit.id },
@@ -322,6 +408,44 @@ router.post('/:benefitId/usage', authenticate, async (req: AuthRequest, res) => 
       usageDate = new Date();
     }
     const currentYear = year || usageDate.getFullYear();
+
+    // Check if this is a custom benefit
+    const customUserBenefit = await prisma.userBenefit.findFirst({
+      where: {
+        id: parseInt(benefitId),
+        userId: req.user!.id,
+        isCustom: true,
+      },
+    });
+
+    if (customUserBenefit) {
+      // Handle custom benefit usage
+      const usage = await prisma.benefitUsage.create({
+        data: {
+          userBenefitId: customUserBenefit.id,
+          amount,
+          usedAt: usageDate,
+          note,
+        },
+      });
+
+      // Update used amount
+      const totalUsed = await prisma.benefitUsage.aggregate({
+        where: { userBenefitId: customUserBenefit.id },
+        _sum: { amount: true },
+      });
+
+      const newUsedAmount = totalUsed._sum.amount || 0;
+      const updated = await prisma.userBenefit.update({
+        where: { id: customUserBenefit.id },
+        data: {
+          usedAmount: newUsedAmount,
+          isCompleted: newUsedAmount >= (customUserBenefit.customAmount || 0),
+        },
+      });
+
+      return res.json({ usage, userBenefit: updated });
+    }
 
     // Get benefit to check frequency and calculate period
     const benefit = await prisma.benefit.findUnique({

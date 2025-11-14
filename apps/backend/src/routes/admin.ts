@@ -307,4 +307,183 @@ router.get('/users/:userId/cards', async (req: AuthRequest, res) => {
   }
 });
 
+// Get CronJob statistics (admin only)
+router.get('/cronjob-stats', async (req: AuthRequest, res) => {
+  try {
+    const { days = 7 } = req.query;
+    const daysAgo = new Date();
+    daysAgo.setDate(daysAgo.getDate() - parseInt(days as string));
+
+    // Get recent cron job logs
+    const logs = await prisma.cronJobLog.findMany({
+      where: {
+        startedAt: {
+          gte: daysAgo
+        }
+      },
+      orderBy: {
+        startedAt: 'desc'
+      },
+      take: 100
+    });
+
+    // Calculate statistics by job name
+    const statsByJob = logs.reduce((acc, log) => {
+      if (!acc[log.jobName]) {
+        acc[log.jobName] = {
+          jobName: log.jobName,
+          totalRuns: 0,
+          successRuns: 0,
+          failedRuns: 0,
+          partialRuns: 0,
+          totalItemsProcessed: 0,
+          totalSuccessCount: 0,
+          totalFailureCount: 0,
+          avgDurationMs: 0,
+          lastRun: null as Date | null,
+          lastStatus: null as string | null,
+        };
+      }
+
+      const stats = acc[log.jobName];
+      stats.totalRuns++;
+      stats.totalItemsProcessed += log.itemsProcessed;
+      stats.totalSuccessCount += log.successCount;
+      stats.totalFailureCount += log.failureCount;
+
+      if (log.status === 'SUCCESS') stats.successRuns++;
+      else if (log.status === 'FAILED') stats.failedRuns++;
+      else if (log.status === 'PARTIAL') stats.partialRuns++;
+
+      if (!stats.lastRun || log.startedAt > stats.lastRun) {
+        stats.lastRun = log.startedAt;
+        stats.lastStatus = log.status;
+      }
+
+      return acc;
+    }, {} as Record<string, any>);
+
+    // Calculate average duration
+    Object.keys(statsByJob).forEach(jobName => {
+      const jobLogs = logs.filter(l => l.jobName === jobName);
+      const totalDuration = jobLogs.reduce((sum, l) => sum + l.durationMs, 0);
+      statsByJob[jobName].avgDurationMs = Math.round(totalDuration / jobLogs.length);
+    });
+
+    res.json({
+      stats: Object.values(statsByJob),
+      recentLogs: logs.slice(0, 20),
+    });
+  } catch (error: any) {
+    console.error('Error fetching cronjob stats:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get Notification statistics (admin only)
+router.get('/notification-stats', async (req: AuthRequest, res) => {
+  try {
+    const { days = 7 } = req.query;
+    const daysAgo = new Date();
+    daysAgo.setDate(daysAgo.getDate() - parseInt(days as string));
+
+    // Get notification logs
+    const logs = await prisma.notificationLog.findMany({
+      where: {
+        sentAt: {
+          gte: daysAgo
+        }
+      },
+      orderBy: {
+        sentAt: 'desc'
+      },
+      take: 1000
+    });
+
+    // Statistics by channel
+    const statsByChannel = logs.reduce((acc, log) => {
+      if (!acc[log.channel]) {
+        acc[log.channel] = {
+          channel: log.channel,
+          total: 0,
+          success: 0,
+          failed: 0,
+          successRate: 0,
+        };
+      }
+
+      acc[log.channel].total++;
+      if (log.status === 'SUCCESS') acc[log.channel].success++;
+      else acc[log.channel].failed++;
+
+      return acc;
+    }, {} as Record<string, any>);
+
+    // Calculate success rates
+    Object.values(statsByChannel).forEach((stat: any) => {
+      stat.successRate = stat.total > 0 ? Math.round((stat.success / stat.total) * 100) : 0;
+    });
+
+    // Statistics by type
+    const statsByType = logs.reduce((acc, log) => {
+      if (!acc[log.notificationType]) {
+        acc[log.notificationType] = {
+          type: log.notificationType,
+          total: 0,
+          success: 0,
+          failed: 0,
+        };
+      }
+
+      acc[log.notificationType].total++;
+      if (log.status === 'SUCCESS') acc[log.notificationType].success++;
+      else acc[log.notificationType].failed++;
+
+      return acc;
+    }, {} as Record<string, any>);
+
+    // Daily statistics
+    const dailyStats = logs.reduce((acc, log) => {
+      const date = log.sentAt.toISOString().split('T')[0];
+      if (!acc[date]) {
+        acc[date] = {
+          date,
+          total: 0,
+          success: 0,
+          failed: 0,
+        };
+      }
+
+      acc[date].total++;
+      if (log.status === 'SUCCESS') acc[date].success++;
+      else acc[date].failed++;
+
+      return acc;
+    }, {} as Record<string, any>);
+
+    res.json({
+      totalNotifications: logs.length,
+      totalSuccess: logs.filter(l => l.status === 'SUCCESS').length,
+      totalFailed: logs.filter(l => l.status === 'FAILED').length,
+      successRate: logs.length > 0 ? Math.round((logs.filter(l => l.status === 'SUCCESS').length / logs.length) * 100) : 0,
+      statsByChannel: Object.values(statsByChannel),
+      statsByType: Object.values(statsByType),
+      dailyStats: Object.values(dailyStats).sort((a: any, b: any) => b.date.localeCompare(a.date)),
+      recentLogs: logs.slice(0, 50).map(log => ({
+        id: log.id,
+        userId: log.userId,
+        type: log.notificationType,
+        channel: log.channel,
+        status: log.status,
+        title: log.title,
+        sentAt: log.sentAt,
+        errorMessage: log.errorMessage,
+      })),
+    });
+  } catch (error: any) {
+    console.error('Error fetching notification stats:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;

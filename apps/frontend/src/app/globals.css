@@ -1560,3 +1560,12 @@ body {
 .spreadsheet-container {
   overflow-x: auto;
 }
+
+/* Limit card name column width on small screens */
+@media (max-width: 735px) {
+  .spreadsheet-container table tbody td:first-child,
+  .spreadsheet-container table thead th:first-child {
+    max-width: 50vw;
+    overflow: hidden;
+  }
+}

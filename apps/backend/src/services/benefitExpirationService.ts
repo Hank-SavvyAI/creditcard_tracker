@@ -6,6 +6,7 @@ import { sendNotification } from './notificationService';
  */
 export async function checkAndNotifyExpiringBenefits() {
   console.log('🔍 Checking for expiring benefits...');
+  const startTime = new Date();
 
   try {
     const now = new Date();
@@ -31,6 +32,7 @@ export async function checkAndNotifyExpiringBenefits() {
 
     let notificationsSent = 0;
     let errors = 0;
+    const errorMessages: string[] = [];
 
     for (const userBenefit of userBenefits) {
       if (!userBenefit.periodEnd) continue;
@@ -66,6 +68,7 @@ export async function checkAndNotifyExpiringBenefits() {
             title,
             body,
             benefitId: benefitId,
+            notificationType: 'benefit-expiration',
             data: {
               userBenefitId: userBenefit.id,
               benefitId: benefitId,
@@ -78,14 +81,42 @@ export async function checkAndNotifyExpiringBenefits() {
             console.log(`✅ Sent notification to user ${userBenefit.userId} for benefit ${benefit.title}`);
           } else {
             errors++;
+            const errorMsg = `User ${userBenefit.userId}: ${result.results?.errors?.join(', ') || 'Unknown error'}`;
+            errorMessages.push(errorMsg);
             console.error(`❌ Failed to send notification to user ${userBenefit.userId}:`, result.results?.errors);
           }
-        } catch (error) {
+        } catch (error: any) {
           errors++;
+          const errorMsg = `User ${userBenefit.userId}: ${error.message}`;
+          errorMessages.push(errorMsg);
           console.error(`❌ Error sending notification to user ${userBenefit.userId}:`, error);
         }
       }
     }
+
+    const endTime = new Date();
+    const durationMs = endTime.getTime() - startTime.getTime();
+    const status = errors === 0 ? 'SUCCESS' : (notificationsSent > 0 ? 'PARTIAL' : 'FAILED');
+
+    // 記錄到 CronJobLog
+    await prisma.cronJobLog.create({
+      data: {
+        jobName: 'benefit-expiration-check',
+        status,
+        startedAt: startTime,
+        completedAt: endTime,
+        durationMs,
+        itemsProcessed: userBenefits.length,
+        successCount: notificationsSent,
+        failureCount: errors,
+        errorMessage: errorMessages.length > 0 ? errorMessages.join('\n') : null,
+        details: JSON.stringify({
+          totalBenefits: userBenefits.length,
+          notificationsSent,
+          errors,
+        }),
+      },
+    });
 
     console.log(`✅ Benefit expiration check complete: ${notificationsSent} notifications sent, ${errors} errors`);
 
@@ -95,8 +126,28 @@ export async function checkAndNotifyExpiringBenefits() {
       errors,
       totalChecked: userBenefits.length,
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Failed to check expiring benefits:', error);
+
+    const endTime = new Date();
+    const durationMs = endTime.getTime() - startTime.getTime();
+
+    // 記錄失敗的任務
+    await prisma.cronJobLog.create({
+      data: {
+        jobName: 'benefit-expiration-check',
+        status: 'FAILED',
+        startedAt: startTime,
+        completedAt: endTime,
+        durationMs,
+        itemsProcessed: 0,
+        successCount: 0,
+        failureCount: 1,
+        errorMessage: error.message,
+        details: JSON.stringify({ error: error.stack }),
+      },
+    });
+
     return {
       success: false,
       error: 'Failed to check expiring benefits',
@@ -109,6 +160,7 @@ export async function checkAndNotifyExpiringBenefits() {
  */
 export async function archiveExpiredBenefits() {
   console.log('📦 Archiving expired benefits...');
+  const startTime = new Date();
 
   try {
     const now = new Date();
@@ -127,6 +179,8 @@ export async function archiveExpiredBenefits() {
     });
 
     let archivedCount = 0;
+    let failedCount = 0;
+    const errorMessages: string[] = [];
 
     for (const benefit of expiredBenefits) {
       // Skip custom benefits (they don't have benefitId and don't need archiving)
@@ -170,10 +224,37 @@ export async function archiveExpiredBenefits() {
         });
 
         archivedCount++;
-      } catch (error) {
+      } catch (error: any) {
+        failedCount++;
+        const errorMsg = `Benefit ${benefit.id}: ${error.message}`;
+        errorMessages.push(errorMsg);
         console.error(`❌ Failed to archive benefit ${benefit.id}:`, error);
       }
     }
+
+    const endTime = new Date();
+    const durationMs = endTime.getTime() - startTime.getTime();
+    const status = failedCount === 0 ? 'SUCCESS' : (archivedCount > 0 ? 'PARTIAL' : 'FAILED');
+
+    // 記錄到 CronJobLog
+    await prisma.cronJobLog.create({
+      data: {
+        jobName: 'benefit-archiving',
+        status,
+        startedAt: startTime,
+        completedAt: endTime,
+        durationMs,
+        itemsProcessed: expiredBenefits.length,
+        successCount: archivedCount,
+        failureCount: failedCount,
+        errorMessage: errorMessages.length > 0 ? errorMessages.join('\n') : null,
+        details: JSON.stringify({
+          totalExpired: expiredBenefits.length,
+          archived: archivedCount,
+          failed: failedCount,
+        }),
+      },
+    });
 
     console.log(`✅ Archived ${archivedCount} expired benefits`);
 
@@ -181,8 +262,28 @@ export async function archiveExpiredBenefits() {
       success: true,
       archivedCount,
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Failed to archive expired benefits:', error);
+
+    const endTime = new Date();
+    const durationMs = endTime.getTime() - startTime.getTime();
+
+    // 記錄失敗的任務
+    await prisma.cronJobLog.create({
+      data: {
+        jobName: 'benefit-archiving',
+        status: 'FAILED',
+        startedAt: startTime,
+        completedAt: endTime,
+        durationMs,
+        itemsProcessed: 0,
+        successCount: 0,
+        failureCount: 1,
+        errorMessage: error.message,
+        details: JSON.stringify({ error: error.stack }),
+      },
+    });
+
     return {
       success: false,
       error: 'Failed to archive expired benefits',

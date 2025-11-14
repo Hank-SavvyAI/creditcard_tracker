@@ -248,12 +248,15 @@ export default function Dashboard() {
         </p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {userCards.map((userCard) => {
+          {userCards.map((userCard, index) => {
             // Check if user has multiple instances of this card
             const sameCards = userCards.filter(uc => uc.card.id === userCard.card.id)
             const showCardInstance = sameCards.length > 1
 
-            return (<div key={userCard.id} className="card dashboard-card" style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start' }}>
+            // Alternate background colors
+            const backgroundColor = index % 2 === 0 ? '#ffffff' : '#f9fafb'
+
+            return (<div key={userCard.id} className="card dashboard-card" style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start', backgroundColor }}>
               {/* 左側：卡片圖片 */}
               {userCard.card.photo && (
                 <div style={{ flexShrink: 0, width: '200px' }} className="card-image-container">
@@ -308,7 +311,7 @@ export default function Dashboard() {
                       </p>
                     )}
                   </div>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                     <button
                       onClick={() => openCardSettings(userCard)}
                       className="btn btn-secondary"
@@ -331,6 +334,29 @@ export default function Dashboard() {
                       }}
                     >
                       📅 {language === 'zh-TW' ? '年費與卡片暱稱設定' : 'Card Settings'}
+                    </button>
+                    <button
+                      onClick={() => openCustomBenefitModal(userCard)}
+                      className="btn btn-secondary"
+                      style={{
+                        padding: '0.5rem 1rem',
+                        fontSize: '0.85rem',
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'linear-gradient(135deg, #5568d3 0%, #653a8b 100%)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                      }}
+                    >
+                      🎁 {language === 'zh-TW' ? '新增自訂福利' : 'Add Custom Benefit'}
                     </button>
                     <button
                       onClick={() => removeCard(userCard.id, language === 'zh-TW' ? userCard.card.name : (userCard.card.nameEn || userCard.card.name))}
@@ -371,38 +397,6 @@ export default function Dashboard() {
                       onUpdateSettings={updateNotificationSettings}
                     />
                   ))}
-
-                  {/* 新增自定義福利按鈕 */}
-                  <button
-                    onClick={() => openCustomBenefitModal(userCard)}
-                    style={{
-                      width: '100%',
-                      marginTop: '1rem',
-                      padding: '0.75rem',
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      fontWeight: '600',
-                      fontSize: '0.95rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.5rem',
-                      transition: 'transform 0.2s, box-shadow 0.2s',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-2px)'
-                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)'
-                      e.currentTarget.style.boxShadow = 'none'
-                    }}
-                  >
-                    🎁 {language === 'zh-TW' ? '新增自定義福利（開卡禮/續卡禮）' : 'Add Custom Benefit (Signup/Renewal Bonus)'}
-                  </button>
                 </div>
               </div>
             </div>)
@@ -648,7 +642,7 @@ export default function Dashboard() {
                 fontWeight: '600',
                 color: 'var(--text-color)'
               }}>
-                {language === 'zh-TW' ? '福利金額' : 'Benefit Amount'} <span style={{ color: '#ef4444' }}>*</span>
+                {language === 'zh-TW' ? '累積金額' : 'Amount'} <span style={{ color: '#ef4444' }}>*</span>
               </label>
               <div style={{ display: 'flex', gap: '1rem' }}>
                 <select

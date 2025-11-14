@@ -31,6 +31,7 @@ model User {
   friendOf      Friendship[]    @relation("FriendOfUser")
   pushSubscriptions PushSubscription[]
   loginTokens   LoginToken[]
+  notificationLogs NotificationLog[]
 }
 
 model PushSubscription {
@@ -234,6 +235,46 @@ model LoginToken {
   @@index([expiresAt])
 }
 
+model CronJobLog {
+  id              Int      @id @default(autoincrement())
+  jobName         String   // "benefit-expiration-check" | "benefit-archiving"
+  status          String   // "SUCCESS" | "FAILED" | "PARTIAL"
+  startedAt       DateTime
+  completedAt     DateTime
+  durationMs      Int      // 執行時長（毫秒）
+  itemsProcessed  Int      @default(0) // 處理的項目數量
+  successCount    Int      @default(0) // 成功數量
+  failureCount    Int      @default(0) // 失敗數量
+  errorMessage    String?  @db.Text // 錯誤訊息
+  details         String?  @db.Text // 詳細資訊（JSON 格式）
+  createdAt       DateTime @default(now())
+
+  @@index([jobName])
+  @@index([status])
+  @@index([startedAt])
+}
+
+model NotificationLog {
+  id              Int      @id @default(autoincrement())
+  userId          Int
+  notificationType String  // "benefit-expiration" | "benefit-reminder" | "system" | "test"
+  channel         String   // "telegram" | "line" | "email" | "webpush"
+  status          String   // "SUCCESS" | "FAILED"
+  title           String
+  body            String   @db.Text
+  errorMessage    String?  @db.Text
+  metadata        String?  @db.Text // JSON 格式，儲存額外資訊（如 benefitId, userBenefitId 等）
+  sentAt          DateTime @default(now())
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([notificationType])
+  @@index([channel])
+  @@index([status])
+  @@index([sentAt])
+}
+
 // SQLite doesn't support enums, use String with constants instead
 // UserTier: "FREE" | "PREMIUM" | "VIP"
 // UserRole: "USER" | "ADMIN"
@@ -241,3 +282,6 @@ model LoginToken {
 // FriendStatus: "PENDING" | "ACCEPTED" | "REJECTED"
 // Region: "taiwan" | "america" | "canada" | "japan" | "singapore" | "other"
 // CardType: "personal" | "business"
+// NotificationType: "benefit-expiration" | "benefit-reminder" | "system" | "test"
+// NotificationChannel: "telegram" | "line" | "email" | "webpush"
+// NotificationStatus: "SUCCESS" | "FAILED"
