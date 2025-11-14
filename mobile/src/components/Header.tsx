@@ -140,7 +140,7 @@ export default function Header() {
           <LanguageSwitcher />
 
           {!isMounted ? (
-            <div style={{ width: '80px', height: '36px' }}></div>
+            <div style={{ width: '70px', height: '32px' }}></div>
           ) : user ? (
             <div style={{ position: 'relative' }}>
               <button
@@ -148,27 +148,27 @@ export default function Header() {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.3rem',
-                  padding: '0.4rem 0.7rem',
+                  gap: '0.25rem',
+                  padding: '0.35rem 0.6rem',
                   background: 'var(--background)',
                   border: '1px solid var(--border-color)',
                   borderRadius: '8px',
                   cursor: 'pointer',
                   color: 'var(--foreground)',
                   fontWeight: '500',
-                  fontSize: '0.85rem',
+                  fontSize: '0.75rem',
                 }}
               >
-                <span style={{ fontSize: '1rem' }}>👤</span>
+                <span style={{ fontSize: '0.9rem' }}>👤</span>
                 <span style={{
-                  maxWidth: '60px',
+                  maxWidth: '50px',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap'
                 }}>
                   {user.username || user.firstName || 'User'}
                 </span>
-                <span style={{ fontSize: '0.7rem' }}>▼</span>
+                <span style={{ fontSize: '0.65rem' }}>▼</span>
               </button>
 
               {showDropdown && (
@@ -223,14 +223,14 @@ export default function Header() {
             <button
               onClick={handleLogin}
               style={{
-                padding: '0.4rem 1rem',
+                padding: '0.35rem 0.9rem',
                 background: 'var(--primary-color)',
                 color: 'white',
                 border: 'none',
                 borderRadius: '8px',
                 cursor: 'pointer',
                 fontWeight: '500',
-                fontSize: '0.85rem',
+                fontSize: '0.75rem',
                 whiteSpace: 'nowrap',
               }}
             >

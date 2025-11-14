@@ -574,20 +574,20 @@ body {
 /* Language Switcher */
 .language-switcher {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.25rem;
   background: var(--background-card);
-  padding: 4px;
-  border-radius: 10px;
-  border: 2px solid var(--border-color);
+  padding: 3px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border-color);
 }
 
 .lang-btn {
-  padding: 6px 16px;
+  padding: 4px 10px;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   background: transparent;
   color: var(--foreground-light);
-  font-size: 0.9rem;
+  font-size: 0.75rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;

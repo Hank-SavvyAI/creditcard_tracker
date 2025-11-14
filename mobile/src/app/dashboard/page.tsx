@@ -350,18 +350,18 @@ export default function Dashboard() {
                   </div>
 
                   {/* Action Buttons */}
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-start' }}>
                     <button
                       style={{
-                        flex: 1,
-                        padding: '0.75rem',
+                        padding: '0.75rem 1.25rem',
                         background: '#667eea',
                         color: 'white',
                         borderRadius: '8px',
                         border: 'none',
                         fontWeight: '600',
-                        fontSize: '0.95rem',
+                        fontSize: '0.9rem',
                         cursor: 'pointer',
+                        whiteSpace: 'nowrap',
                       }}
                       onClick={() => router.push(`/cards/detail?id=${userCard.card.id}`)}
                     >
@@ -375,7 +375,7 @@ export default function Dashboard() {
                         borderRadius: '8px',
                         border: 'none',
                         fontWeight: '600',
-                        fontSize: '0.95rem',
+                        fontSize: '0.9rem',
                         cursor: 'pointer',
                       }}
                       onClick={() => handleRemoveCard(userCard.id, userCard.card.name)}
