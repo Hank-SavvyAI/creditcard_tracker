@@ -891,4 +891,118 @@ router.delete('/custom/:id', authenticate, async (req: AuthRequest, res) => {
   }
 });
 
+// Hide a benefit
+router.post('/:benefitId/hide', authenticate, async (req: AuthRequest, res) => {
+  try {
+    const { benefitId } = req.params;
+    const { year, userCardId } = req.body;
+
+    if (!userCardId) {
+      return res.status(400).json({ error: 'userCardId is required' });
+    }
+
+    // Check if this is a custom benefit
+    const customUserBenefit = await prisma.userBenefit.findFirst({
+      where: {
+        id: parseInt(benefitId),
+        userId: req.user!.id,
+        isCustom: true,
+      },
+    });
+
+    let userBenefit;
+    if (customUserBenefit) {
+      userBenefit = customUserBenefit;
+    } else {
+      // First try to find existing userBenefit
+      const existingUserBenefit = await prisma.userBenefit.findFirst({
+        where: {
+          userId: req.user!.id,
+          userCardId: userCardId,
+          benefitId: parseInt(benefitId),
+          year: year || new Date().getFullYear(),
+        },
+      });
+
+      if (existingUserBenefit) {
+        userBenefit = existingUserBenefit;
+      } else {
+        userBenefit = await findOrCreateUserBenefit(
+          req.user!.id,
+          userCardId,
+          parseInt(benefitId),
+          year
+        );
+      }
+    }
+
+    const updated = await prisma.userBenefit.update({
+      where: { id: userBenefit.id },
+      data: { isHidden: true },
+    });
+
+    res.json(updated);
+  } catch (error: any) {
+    console.error('Failed to hide benefit:', error);
+    res.status(500).json({ error: error.message || 'Failed to hide benefit' });
+  }
+});
+
+// Unhide a benefit
+router.post('/:benefitId/unhide', authenticate, async (req: AuthRequest, res) => {
+  try {
+    const { benefitId } = req.params;
+    const { year, userCardId } = req.body;
+
+    if (!userCardId) {
+      return res.status(400).json({ error: 'userCardId is required' });
+    }
+
+    // Check if this is a custom benefit
+    const customUserBenefit = await prisma.userBenefit.findFirst({
+      where: {
+        id: parseInt(benefitId),
+        userId: req.user!.id,
+        isCustom: true,
+      },
+    });
+
+    let userBenefit;
+    if (customUserBenefit) {
+      userBenefit = customUserBenefit;
+    } else {
+      // First try to find existing userBenefit
+      const existingUserBenefit = await prisma.userBenefit.findFirst({
+        where: {
+          userId: req.user!.id,
+          userCardId: userCardId,
+          benefitId: parseInt(benefitId),
+          year: year || new Date().getFullYear(),
+        },
+      });
+
+      if (existingUserBenefit) {
+        userBenefit = existingUserBenefit;
+      } else {
+        userBenefit = await findOrCreateUserBenefit(
+          req.user!.id,
+          userCardId,
+          parseInt(benefitId),
+          year
+        );
+      }
+    }
+
+    const updated = await prisma.userBenefit.update({
+      where: { id: userBenefit.id },
+      data: { isHidden: false },
+    });
+
+    res.json(updated);
+  } catch (error: any) {
+    console.error('Failed to unhide benefit:', error);
+    res.status(500).json({ error: error.message || 'Failed to unhide benefit' });
+  }
+});
+
 export default router;

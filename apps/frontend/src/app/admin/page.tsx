@@ -14,8 +14,12 @@ export default function AdminPage() {
   const [searchRegion, setSearchRegion] = useState('')
   const [searchBank, setSearchBank] = useState('')
   const [searchType, setSearchType] = useState('')
-  const [sortBy, setSortBy] = useState<'name' | 'bank' | 'id'>('id')
+  const [sortBy, setSortBy] = useState<'name' | 'bank' | 'id' | 'priority'>('priority')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+  const [isPriorityMode, setIsPriorityMode] = useState(false)
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
+  const [priorityCards, setPriorityCards] = useState<any[]>([])
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     const skipAuth = process.env.NEXT_PUBLIC_SKIP_AUTH === 'true'
@@ -96,6 +100,8 @@ export default function AdminPage() {
         compareValue = a.name.localeCompare(b.name)
       } else if (sortBy === 'bank') {
         compareValue = a.bank.localeCompare(b.bank)
+      } else if (sortBy === 'priority') {
+        compareValue = a.displayPriority - b.displayPriority
       } else {
         // sortBy === 'id'
         compareValue = a.id - b.id
@@ -104,7 +110,7 @@ export default function AdminPage() {
       return sortOrder === 'asc' ? compareValue : -compareValue
     })
 
-  function handleSort(field: 'name' | 'bank' | 'id') {
+  function handleSort(field: 'name' | 'bank' | 'id' | 'priority') {
     if (sortBy === field) {
       // 如果已經在排序這個欄位，切換順序
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
@@ -112,6 +118,67 @@ export default function AdminPage() {
       // 切換到新欄位，預設升序
       setSortBy(field)
       setSortOrder('asc')
+    }
+  }
+
+  function enterPriorityMode() {
+    // 進入優先順序調整模式，按照 displayPriority 排序
+    const sorted = [...cards].sort((a, b) => a.displayPriority - b.displayPriority)
+    setPriorityCards(sorted)
+    setIsPriorityMode(true)
+  }
+
+  function exitPriorityMode() {
+    setIsPriorityMode(false)
+    setPriorityCards([])
+    setDraggedIndex(null)
+  }
+
+  function handleDragStart(index: number) {
+    setDraggedIndex(index)
+  }
+
+  function handleDragOver(e: React.DragEvent, index: number) {
+    e.preventDefault()
+
+    if (draggedIndex === null || draggedIndex === index) return
+
+    const newCards = [...priorityCards]
+    const draggedCard = newCards[draggedIndex]
+
+    // Remove from old position
+    newCards.splice(draggedIndex, 1)
+    // Insert at new position
+    newCards.splice(index, 0, draggedCard)
+
+    setPriorityCards(newCards)
+    setDraggedIndex(index)
+  }
+
+  function handleDragEnd() {
+    setDraggedIndex(null)
+  }
+
+  async function savePriority() {
+    setSaving(true)
+    try {
+      // Update displayPriority based on current order
+      const updates = priorityCards.map((card, index) => ({
+        id: card.id,
+        displayPriority: index + 1
+      }))
+
+      await api.updateCardsPriority(updates)
+      alert('順序已儲存')
+
+      // Reload cards
+      await loadCards()
+      exitPriorityMode()
+    } catch (err) {
+      console.error('儲存失敗:', err)
+      alert('儲存順序失敗')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -141,11 +208,41 @@ export default function AdminPage() {
 
       {error && <div className="error-message">{error}</div>}
 
-      <div style={{ marginBottom: '2rem' }}>
-        <Link href="/admin/cards/new" className="btn-primary">
-          ➕ 新增信用卡
-        </Link>
-      </div>
+      {isPriorityMode ? (
+        <div style={{ marginBottom: '2rem' }}>
+          <div style={{ marginBottom: '1rem', padding: '1rem', background: '#eff6ff', borderRadius: '8px', border: '1px solid #3b82f6' }}>
+            <p style={{ margin: 0, color: '#1e40af' }}>
+              💡 拖曳卡片以調整顯示順序，順序越前面的卡片在用戶介面中優先顯示
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: '1rem' }}>
+            <button
+              onClick={savePriority}
+              disabled={saving}
+              className="btn-primary"
+              style={{ opacity: saving ? 0.6 : 1 }}
+            >
+              {saving ? '儲存中...' : '💾 儲存順序'}
+            </button>
+            <button
+              onClick={exitPriorityMode}
+              disabled={saving}
+              className="btn btn-secondary"
+            >
+              ❌ 取消
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div style={{ marginBottom: '2rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+          <Link href="/admin/cards/new" className="btn-primary">
+            ➕ 新增信用卡
+          </Link>
+          <button onClick={enterPriorityMode} className="btn btn-secondary">
+            🎯 調整顯示順序
+          </button>
+        </div>
+      )}
 
       {/* 搜尋區域 */}
       <div className="admin-search-bar" style={{ marginBottom: '2rem', display: 'flex', gap: '1rem', alignItems: 'end' }}>
@@ -206,96 +303,170 @@ export default function AdminPage() {
         </button>
       </div>
 
-      <div className="admin-table-container">
-        <h2>信用卡列表 ({filteredCards.length} / {cards.length})</h2>
+      {isPriorityMode ? (
+        <div className="priority-list">
+          {priorityCards.map((card, index) => (
+            <div
+              key={card.id}
+              draggable
+              onDragStart={() => handleDragStart(index)}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDragEnd={handleDragEnd}
+              style={{
+                padding: '1rem',
+                marginBottom: '0.5rem',
+                background: draggedIndex === index ? '#f0f9ff' : 'white',
+                border: draggedIndex === index ? '2px solid #3b82f6' : '2px solid #e5e7eb',
+                borderRadius: '8px',
+                cursor: 'grab',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '1rem',
+                transition: 'all 0.2s ease',
+                opacity: draggedIndex === index ? 0.5 : 1,
+              }}
+            >
+              <div style={{
+                fontSize: '1.5rem',
+                color: '#9ca3af',
+                minWidth: '2rem',
+                textAlign: 'center',
+              }}>
+                ⋮⋮
+              </div>
+              <div style={{
+                fontWeight: '600',
+                minWidth: '3rem',
+                fontSize: '1.1rem',
+                color: '#3b82f6',
+              }}>
+                #{index + 1}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>
+                  {card.name}
+                </div>
+                <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                  {card.bank} •
+                  {card.region === 'taiwan' && ' 🇹🇼 台灣'}
+                  {card.region === 'america' && ' 🇺🇸 美國'}
+                  {card.region === 'canada' && ' 🇨🇦 加拿大'}
+                  {card.region === 'japan' && ' 🇯🇵 日本'}
+                  {card.region === 'singapore' && ' 🇸🇬 新加坡'}
+                  {card.region === 'other' && ' 🌏 其他'}
+                  {' • '}{card.type === 'business' ? '🏢 商業卡' : '💳 個人卡'}
+                </div>
+              </div>
+              <div style={{
+                fontSize: '0.875rem',
+                color: '#9ca3af',
+                minWidth: '8rem',
+                textAlign: 'right',
+              }}>
+                Priority: {card.displayPriority}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="admin-table-container">
+          <h2>信用卡列表 ({filteredCards.length} / {cards.length})</h2>
 
-        {filteredCards.length === 0 ? (
-          <p>{cards.length === 0 ? '目前沒有任何信用卡' : '沒有符合條件的信用卡'}</p>
-        ) : (
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th
-                  onClick={() => handleSort('id')}
-                  style={{ cursor: 'pointer', userSelect: 'none' }}
-                >
-                  ID {sortBy === 'id' && (sortOrder === 'asc' ? '↑' : '↓')}
-                </th>
-                <th
-                  onClick={() => handleSort('name')}
-                  style={{ cursor: 'pointer', userSelect: 'none' }}
-                >
-                  卡片名稱 {sortBy === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}
-                </th>
-                <th
-                  onClick={() => handleSort('bank')}
-                  style={{ cursor: 'pointer', userSelect: 'none' }}
-                >
-                  銀行 {sortBy === 'bank' && (sortOrder === 'asc' ? '↑' : '↓')}
-                </th>
-                <th style={{ whiteSpace: 'nowrap' }}>年費</th>
-                <th style={{ whiteSpace: 'nowrap' }}>地區</th>
-                <th style={{ whiteSpace: 'nowrap' }}>類型</th>
-                <th style={{ whiteSpace: 'nowrap' }}>福利數量</th>
-                <th style={{ whiteSpace: 'nowrap' }}>狀態</th>
-                <th style={{ whiteSpace: 'nowrap' }}>操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredCards.map((card) => (
-                <tr key={card.id}>
-                  <td>{card.id}</td>
-                  <td>{card.name}</td>
-                  <td style={{ whiteSpace: 'nowrap' }}>{card.bank}</td>
-                  <td style={{ whiteSpace: 'nowrap' }}>{card.fee || '-'}</td>
-                  <td style={{ whiteSpace: 'nowrap' }}>
-                    {card.region === 'taiwan' && '🇹🇼 台灣'}
-                    {card.region === 'america' && '🇺🇸 美國'}
-                    {card.region === 'canada' && '🇨🇦 加拿大'}
-                    {card.region === 'japan' && '🇯🇵 日本'}
-                    {card.region === 'singapore' && '🇸🇬 新加坡'}
-                    {card.region === 'other' && '🌏 其他'}
-                  </td>
-                  <td style={{ whiteSpace: 'nowrap' }}>
-                    <span style={{
-                      padding: '0.25rem 0.5rem',
-                      borderRadius: '4px',
-                      fontSize: '0.85rem',
-                      fontWeight: '500',
-                      background: card.type === 'business' ? '#dbeafe' : '#fef3c7',
-                      color: card.type === 'business' ? '#1e40af' : '#92400e',
-                    }}>
-                      {card.type === 'business' ? '🏢 商業卡' : '💳 個人卡'}
-                    </span>
-                  </td>
-                  <td style={{ whiteSpace: 'nowrap' }}>{card.benefits?.length || 0} 項</td>
-                  <td style={{ whiteSpace: 'nowrap' }}>
-                    <span className={`status-badge ${card.isActive ? 'active' : 'inactive'}`}>
-                      {card.isActive ? '啟用' : '停用'}
-                    </span>
-                  </td>
-                  <td style={{ whiteSpace: 'nowrap' }}>
-                    <div className="action-buttons">
-                      <Link
-                        href={`/admin/cards/${card.id}`}
-                        className="btn-sm btn-edit"
-                      >
-                        編輯
-                      </Link>
-                      <button
-                        onClick={() => handleDelete(card.id, card.name)}
-                        className="btn-sm btn-delete"
-                      >
-                        刪除
-                      </button>
-                    </div>
-                  </td>
+          {filteredCards.length === 0 ? (
+            <p>{cards.length === 0 ? '目前沒有任何信用卡' : '沒有符合條件的信用卡'}</p>
+          ) : (
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th
+                    onClick={() => handleSort('id')}
+                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                  >
+                    ID {sortBy === 'id' && (sortOrder === 'asc' ? '↑' : '↓')}
+                  </th>
+                  <th
+                    onClick={() => handleSort('name')}
+                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                  >
+                    卡片名稱 {sortBy === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}
+                  </th>
+                  <th
+                    onClick={() => handleSort('bank')}
+                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                  >
+                    銀行 {sortBy === 'bank' && (sortOrder === 'asc' ? '↑' : '↓')}
+                  </th>
+                  <th
+                    onClick={() => handleSort('priority')}
+                    style={{ cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}
+                  >
+                    顯示順序 {sortBy === 'priority' && (sortOrder === 'asc' ? '↑' : '↓')}
+                  </th>
+                  <th style={{ whiteSpace: 'nowrap' }}>年費</th>
+                  <th style={{ whiteSpace: 'nowrap' }}>地區</th>
+                  <th style={{ whiteSpace: 'nowrap' }}>類型</th>
+                  <th style={{ whiteSpace: 'nowrap' }}>福利數量</th>
+                  <th style={{ whiteSpace: 'nowrap' }}>狀態</th>
+                  <th style={{ whiteSpace: 'nowrap' }}>操作</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+              </thead>
+              <tbody>
+                {filteredCards.map((card) => (
+                  <tr key={card.id}>
+                    <td>{card.id}</td>
+                    <td>{card.name}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>{card.bank}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>{card.displayPriority}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>{card.fee || '-'}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      {card.region === 'taiwan' && '🇹🇼 台灣'}
+                      {card.region === 'america' && '🇺🇸 美國'}
+                      {card.region === 'canada' && '🇨🇦 加拿大'}
+                      {card.region === 'japan' && '🇯🇵 日本'}
+                      {card.region === 'singapore' && '🇸🇬 新加坡'}
+                      {card.region === 'other' && '🌏 其他'}
+                    </td>
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      <span style={{
+                        padding: '0.25rem 0.5rem',
+                        borderRadius: '4px',
+                        fontSize: '0.85rem',
+                        fontWeight: '500',
+                        background: card.type === 'business' ? '#dbeafe' : '#fef3c7',
+                        color: card.type === 'business' ? '#1e40af' : '#92400e',
+                      }}>
+                        {card.type === 'business' ? '🏢 商業卡' : '💳 個人卡'}
+                      </span>
+                    </td>
+                    <td style={{ whiteSpace: 'nowrap' }}>{card.benefits?.length || 0} 項</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      <span className={`status-badge ${card.isActive ? 'active' : 'inactive'}`}>
+                        {card.isActive ? '啟用' : '停用'}
+                      </span>
+                    </td>
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      <div className="action-buttons">
+                        <Link
+                          href={`/admin/cards/${card.id}`}
+                          className="btn-sm btn-edit"
+                        >
+                          編輯
+                        </Link>
+                        <button
+                          onClick={() => handleDelete(card.id, card.name)}
+                          className="btn-sm btn-delete"
+                        >
+                          刪除
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
     </div>
   )
 }

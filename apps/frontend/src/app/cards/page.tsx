@@ -8,6 +8,7 @@ import { useLanguageStore, t } from '@/store/language'
 export default function CardsPage() {
   const { language } = useLanguageStore()
   const [cards, setCards] = useState<any[]>([])
+  const [userCards, setUserCards] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [isLoggedIn, setIsLoggedIn] = useState(false)
@@ -44,12 +45,28 @@ export default function CardsPage() {
       // 即使未登入也可以瀏覽信用卡列表
       const data = await api.getCards()
       setCards(data)
+
+      // 如果已登入，載入用戶的追蹤卡片
+      const token = localStorage.getItem('token')
+      if (token) {
+        try {
+          const myCards = await api.getMyCards()
+          setUserCards(myCards)
+        } catch (err) {
+          console.error('Failed to load user cards:', err)
+        }
+      }
     } catch (err) {
       setError(language === 'zh-TW' ? '無法載入信用卡資料' : 'Failed to load credit cards')
       console.error(err)
     } finally {
       setLoading(false)
     }
+  }
+
+  // 計算每張卡被追蹤的數量
+  const getTrackingCount = (cardId: number) => {
+    return userCards.filter(uc => uc.card.id === cardId).length
   }
 
   // 按地區分組信用卡
@@ -74,6 +91,32 @@ export default function CardsPage() {
 
   const getRegionName = (region: string) => {
     return language === 'zh-TW' ? regionNames[region]?.name : regionNames[region]?.nameEn
+  }
+
+  async function removeOneCard(cardId: number) {
+    if (!isLoggedIn) {
+      return
+    }
+
+    const trackedCards = userCards.filter(uc => uc.card.id === cardId)
+    if (trackedCards.length === 0) {
+      return
+    }
+
+    // Remove the latest (most recent) tracked instance
+    const cardToRemove = trackedCards[trackedCards.length - 1]
+
+    try {
+      setTrackingCard(cardId)
+      await api.removeCard(cardToRemove.id)
+      // Reload cards to update the count
+      await loadCards()
+    } catch (error) {
+      console.error('Failed to remove card:', error)
+      alert(language === 'zh-TW' ? '移除失敗' : 'Failed to remove card')
+    } finally {
+      setTrackingCard(null)
+    }
   }
 
   async function trackCard(cardId: number) {
@@ -111,6 +154,8 @@ export default function CardsPage() {
       setShowDateModal(false)
       setPendingCard(null)
       setBenefitStartDates({})
+      // Reload cards to update the count
+      await loadCards()
     } catch (error: any) {
       console.error('Failed to track card:', error)
       const errorMessage = error.message || ''
@@ -434,23 +479,98 @@ export default function CardsPage() {
                     )}
 
                     {/* 追蹤按鈕 */}
-                    <button
-                      onClick={() => trackCard(card.id)}
-                      disabled={trackingCard === card.id}
-                      className="btn btn-primary"
-                      style={{
-                        width: '100%',
-                        marginBottom: '0.75rem',
-                        opacity: trackingCard === card.id ? 0.5 : 1,
-                        cursor: trackingCard === card.id ? 'not-allowed' : 'pointer',
-                      }}
-                    >
-                      {trackingCard === card.id
-                        ? (language === 'zh-TW' ? '追蹤中...' : 'Tracking...')
-                        : isLoggedIn
-                        ? (language === 'zh-TW' ? '追蹤此卡' : 'Track This Card')
-                        : (language === 'zh-TW' ? '登入以追蹤此卡' : 'Login to Track This Card')}
-                    </button>
+                    {isLoggedIn ? (
+                      <div style={{ width: '100%', marginBottom: '0.75rem' }}>
+                        {/* 追蹤標籤 */}
+                        <div style={{
+                          fontSize: '0.875rem',
+                          fontWeight: '600',
+                          color: '#64748b',
+                          marginBottom: '0.5rem',
+                          textAlign: 'center'
+                        }}>
+                          📌 {language === 'zh-TW' ? '追蹤此卡' : 'Track This Card'}
+                        </div>
+
+                        {/* 追蹤控制器 */}
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          border: '2px solid #e5e7eb',
+                          borderRadius: '8px',
+                          overflow: 'hidden'
+                        }}>
+                        {/* 減號按鈕 */}
+                        <button
+                          onClick={() => removeOneCard(card.id)}
+                          disabled={trackingCard === card.id || getTrackingCount(card.id) === 0}
+                          style={{
+                            flex: '0 0 40px',
+                            height: '40px',
+                            background: '#789baa',
+                            color: 'white',
+                            border: 'none',
+                            fontSize: '1.25rem',
+                            fontWeight: 'bold',
+                            cursor: getTrackingCount(card.id) === 0 ? 'not-allowed' : 'pointer',
+                            opacity: getTrackingCount(card.id) === 0 ? 0.4 : 1,
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          −
+                        </button>
+
+                        {/* 數字顯示 */}
+                        <div style={{
+                          flex: 1,
+                          height: '40px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          background: '#f0f4f7',
+                          fontSize: trackingCard === card.id ? '0.8rem' : '1.1rem',
+                          fontWeight: '600',
+                          color: '#4a5c66'
+                        }}>
+                          {trackingCard === card.id
+                            ? (language === 'zh-TW' ? '處理中...' : 'Processing...')
+                            : getTrackingCount(card.id)}
+                        </div>
+
+                        {/* 加號按鈕 */}
+                        <button
+                          onClick={() => trackCard(card.id)}
+                          disabled={trackingCard === card.id}
+                          style={{
+                            flex: '0 0 40px',
+                            height: '40px',
+                            background: '#789baa',
+                            color: 'white',
+                            border: 'none',
+                            fontSize: '1.25rem',
+                            fontWeight: 'bold',
+                            cursor: trackingCard === card.id ? 'not-allowed' : 'pointer',
+                            opacity: trackingCard === card.id ? 0.4 : 1,
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          +
+                        </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => trackCard(card.id)}
+                        className="btn btn-primary"
+                        style={{
+                          width: '100%',
+                          marginBottom: '0.75rem'
+                        }}
+                      >
+                        {language === 'zh-TW' ? '登入以追蹤此卡' : 'Login to Track This Card'}
+                      </button>
+                    )}
 
                     {/* 查看詳情按鈕 */}
                     <button

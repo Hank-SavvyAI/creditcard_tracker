@@ -28,6 +28,7 @@ export default function Dashboard() {
   const [customAmount, setCustomAmount] = useState<number | ''>('')
   const [customCurrency, setCustomCurrency] = useState('USD')
   const [customPeriodEnd, setCustomPeriodEnd] = useState('')
+  const [showHiddenBenefits, setShowHiddenBenefits] = useState(false)
   const year = new Date().getFullYear()
 
   useEffect(() => {
@@ -79,6 +80,20 @@ export default function Dashboard() {
     } catch (error) {
       console.error('Failed to update notification settings:', error)
       alert(language === 'zh-TW' ? '更新失敗' : 'Update failed')
+    }
+  }
+
+  async function toggleHideBenefit(benefitId: number, isHidden: boolean, userCardId: number) {
+    try {
+      if (isHidden) {
+        await api.unhideBenefit(benefitId, year, userCardId)
+      } else {
+        await api.hideBenefit(benefitId, year, userCardId)
+      }
+      await loadData()
+    } catch (error) {
+      console.error('Failed to toggle benefit visibility:', error)
+      alert(language === 'zh-TW' ? '操作失敗' : 'Operation failed')
     }
   }
 
@@ -199,9 +214,22 @@ export default function Dashboard() {
   return (
     <div className="dashboard">
       <div className="dashboard-header">
-        <h1>
-          {language === 'zh-TW' ? `我的信用卡福利 (${year})` : `My Credit Card Benefits (${year})`}
-        </h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+          <h1 style={{ margin: 0 }}>
+            {language === 'zh-TW' ? `我的信用卡福利 (${year})` : `My Credit Card Benefits (${year})`}
+          </h1>
+          <div style={{
+            padding: '0.5rem 1rem',
+            background: 'linear-gradient(135deg, #9b8ba4 0%, #7a6b84 100%)',
+            color: 'white',
+            borderRadius: '20px',
+            fontSize: '0.9rem',
+            fontWeight: '600',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+          }}>
+            💳 {userCards.length} {language === 'zh-TW' ? '張卡片' : 'Cards'}
+          </div>
+        </div>
         <div style={{ display: 'flex', gap: '1rem' }} className="dashboard-actions">
           <div style={{ display: 'flex', gap: '0.5rem', marginRight: 'auto' }}>
             <button
@@ -223,6 +251,18 @@ export default function Dashboard() {
               }}
             >
               📊 {language === 'zh-TW' ? '表格視圖' : 'Spreadsheet View'}
+            </button>
+            <button
+              onClick={() => setShowHiddenBenefits(!showHiddenBenefits)}
+              className="btn btn-secondary"
+              style={{
+                background: showHiddenBenefits ? '#3b82f6' : '#e5e7eb',
+                color: showHiddenBenefits ? 'white' : '#374151',
+              }}
+            >
+              {showHiddenBenefits
+                ? (language === 'zh-TW' ? '👁️ 顯示隱藏福利' : '👁️ Show Hidden')
+                : (language === 'zh-TW' ? '🙈 隱藏福利已過濾' : '🙈 Hidden Filtered')}
             </button>
           </div>
           {isAdmin && (
@@ -386,17 +426,24 @@ export default function Dashboard() {
 
                 {/* 福利列表 */}
                 <div style={{ marginTop: '1rem' }}>
-                  {userCard.card.benefits.map((benefit: any) => (
-                    <BenefitItem
-                      key={benefit.id}
-                      benefit={benefit}
-                      userCardId={userCard.id}
-                      language={language}
-                      year={year}
-                      onToggle={toggleBenefit}
-                      onUpdateSettings={updateNotificationSettings}
-                    />
-                  ))}
+                  {userCard.card.benefits
+                    .filter((benefit: any) => {
+                      const userBenefit = benefit.userBenefits[0]
+                      const isHidden = userBenefit && userBenefit.isHidden
+                      return showHiddenBenefits || !isHidden
+                    })
+                    .map((benefit: any) => (
+                      <BenefitItem
+                        key={benefit.id}
+                        benefit={benefit}
+                        userCardId={userCard.id}
+                        language={language}
+                        year={year}
+                        onToggle={toggleBenefit}
+                        onUpdateSettings={updateNotificationSettings}
+                        onToggleHide={toggleHideBenefit}
+                      />
+                    ))}
                 </div>
               </div>
             </div>)

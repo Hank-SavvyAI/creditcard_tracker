@@ -49,6 +49,33 @@ router.post('/cards', async (req: AuthRequest, res) => {
   }
 });
 
+// Update multiple cards' displayPriority
+// IMPORTANT: This must come BEFORE /cards/:id to avoid route matching issues
+router.patch('/cards/priority', async (req: AuthRequest, res) => {
+  try {
+    const { updates } = req.body;
+
+    if (!Array.isArray(updates)) {
+      return res.status(400).json({ error: 'Updates must be an array' });
+    }
+
+    // Update all cards in a transaction
+    await prisma.$transaction(
+      updates.map((update: { id: number; displayPriority: number }) =>
+        prisma.creditCard.update({
+          where: { id: update.id },
+          data: { displayPriority: update.displayPriority },
+        })
+      )
+    );
+
+    res.json({ success: true, updated: updates.length });
+  } catch (error) {
+    console.error('Failed to update card priorities:', error);
+    res.status(500).json({ error: 'Failed to update card priorities' });
+  }
+});
+
 // Update credit card
 router.patch('/cards/:id', async (req: AuthRequest, res) => {
   try {

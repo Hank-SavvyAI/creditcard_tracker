@@ -10,6 +10,7 @@ interface BenefitItemProps {
   year: number
   onToggle: (benefitId: number, isCompleted: boolean, userCardId: number) => void
   onUpdateSettings: (benefitId: number, settings: { reminderDays?: number; notificationEnabled?: boolean }, userCardId: number) => void
+  onToggleHide?: (benefitId: number, isHidden: boolean, userCardId: number) => void
 }
 
 interface BenefitUsage {
@@ -19,7 +20,7 @@ interface BenefitUsage {
   note: string | null
 }
 
-export default function BenefitItem({ benefit, userCardId, language, year, onToggle, onUpdateSettings }: BenefitItemProps) {
+export default function BenefitItem({ benefit, userCardId, language, year, onToggle, onUpdateSettings, onToggleHide }: BenefitItemProps) {
   const [showSettings, setShowSettings] = useState(false)
   const [showUsageForm, setShowUsageForm] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
@@ -32,6 +33,7 @@ export default function BenefitItem({ benefit, userCardId, language, year, onTog
 
   const userBenefit = benefit.userBenefits[0]
   const completed = userBenefit && userBenefit.isCompleted
+  const isHidden = userBenefit && userBenefit.isHidden
   const reminderDays = userBenefit?.reminderDays ?? benefit.reminderDays
   const notificationEnabled = userBenefit?.notificationEnabled ?? true
   const isNotifiable = benefit.notifiable ?? true
@@ -412,6 +414,17 @@ export default function BenefitItem({ benefit, userCardId, language, year, onTog
               style={{ padding: '0.4rem 0.75rem', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
             >
               💰 {language === 'zh-TW' ? '記錄報銷' : 'Add Usage'}
+            </button>
+          )}
+          {onToggleHide && (
+            <button
+              onClick={() => onToggleHide(benefit.id, isHidden, userCardId)}
+              className="btn btn-secondary"
+              style={{ padding: '0.4rem 0.75rem', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
+            >
+              {isHidden
+                ? (language === 'zh-TW' ? '👁️ 顯示' : '👁️ Show')
+                : (language === 'zh-TW' ? '🙈 隱藏' : '🙈 Hide')}
             </button>
           )}
         </div>

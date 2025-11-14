@@ -17,6 +17,9 @@
     "test:manual": "tsx src/__tests__/notification.test.ts"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/material": "^7.3.5",
     "@prisma/client": "^5.22.0",
     "@types/nodemailer": "^7.0.2",
     "@types/passport": "^1.0.17",

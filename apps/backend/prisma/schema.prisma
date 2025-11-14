@@ -133,6 +133,7 @@ model UserBenefit {
   reminderDays      Int?            // 自訂提醒天數，null 表示使用 Benefit 的預設值
   notificationEnabled Boolean       @default(true) // 是否啟用通知
   usedAmount        Float?          @default(0)    // 已使用金額
+  isHidden          Boolean         @default(false) // 使用者是否隱藏此福利
 
   // 自定義福利字段
   isCustom          Boolean         @default(false) // 是否為自定義福利（開卡禮、續卡禮等）

@@ -108,6 +108,20 @@ export class ApiClient {
     });
   }
 
+  async hideBenefit(benefitId: number, year?: number, userCardId?: number) {
+    return this.request(`/api/benefits/${benefitId}/hide`, {
+      method: 'POST',
+      body: JSON.stringify({ year, userCardId }),
+    });
+  }
+
+  async unhideBenefit(benefitId: number, year?: number, userCardId?: number) {
+    return this.request(`/api/benefits/${benefitId}/unhide`, {
+      method: 'POST',
+      body: JSON.stringify({ year, userCardId }),
+    });
+  }
+
   async createCustomBenefit(data: {
     userCardId: number;
     customTitle: string;
@@ -171,6 +185,13 @@ export class ApiClient {
   async deleteCard(cardId: number) {
     return this.request(`/api/admin/cards/${cardId}`, {
       method: 'DELETE',
+    });
+  }
+
+  async updateCardsPriority(updates: { id: number; displayPriority: number }[]) {
+    return this.request('/api/admin/cards/priority', {
+      method: 'PATCH',
+      body: JSON.stringify({ updates }),
     });
   }
 
