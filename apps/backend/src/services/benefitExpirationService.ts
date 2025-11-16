@@ -144,18 +144,18 @@ export async function checkAndNotifyExpiringBenefits() {
     let errors = 0;
     const errorMessages: string[] = [];
 
-    // 🧪 測試模式：只發送給使用者 ID 3
+    // 🧪 測試模式：只發送給特定使用者
     const TEST_MODE = process.env.NOTIFICATION_TEST_MODE === 'true';
-    const TEST_USER_ID = 3;
+    const TEST_USER_IDS = [2, 3, 4]; // 測試用戶 ID 列表
 
     if (TEST_MODE) {
-      console.log('🧪 TEST MODE: Only sending notifications to user ID 3');
+      console.log(`🧪 TEST MODE: Only sending notifications to users ${TEST_USER_IDS.join(', ')}`);
     }
 
     for (const [userId, benefits] of benefitsByUser.entries()) {
       // 🧪 測試模式：跳過非測試使用者
-      if (TEST_MODE && userId !== TEST_USER_ID) {
-        console.log(`⏭️  Skipping user ${userId} (test mode enabled, only sending to user ${TEST_USER_ID})`);
+      if (TEST_MODE && !TEST_USER_IDS.includes(userId)) {
+        console.log(`⏭️  Skipping user ${userId} (test mode enabled, only sending to users ${TEST_USER_IDS.join(', ')})`);
         continue;
       }
       try {
