@@ -54,16 +54,38 @@ export default function Dashboard() {
     loadData()
   }, [router])
 
-  async function loadData() {
+  async function loadData(preserveExpanded = false) {
     try {
       // 只載入卡片列表，不載入福利（懶加載優化）
       const cards = await api.getMyCardsOnly()
-      // 初始化卡片，benefits 設為空陣列
-      const cardsWithEmptyBenefits = cards.map((card: any) => ({
-        ...card,
-        benefits: []
-      }))
-      setUserCards(cardsWithEmptyBenefits)
+
+      if (preserveExpanded && expandedCards.size > 0) {
+        // 保留已展開卡片的狀態，並重新載入它們的福利
+        const cardsWithBenefits = await Promise.all(
+          cards.map(async (card: any) => {
+            if (expandedCards.has(card.id)) {
+              // 重新載入已展開卡片的福利
+              try {
+                const { benefits } = await api.getCardBenefits(card.id, year)
+                return { ...card, benefits }
+              } catch (error) {
+                console.error('Failed to reload benefits for card:', card.id)
+                return { ...card, benefits: [] }
+              }
+            } else {
+              return { ...card, benefits: [] }
+            }
+          })
+        )
+        setUserCards(cardsWithBenefits)
+      } else {
+        // 初始化卡片，benefits 設為空陣列
+        const cardsWithEmptyBenefits = cards.map((card: any) => ({
+          ...card,
+          benefits: []
+        }))
+        setUserCards(cardsWithEmptyBenefits)
+      }
     } catch (error) {
       console.error('Failed to load data:', error)
     } finally {
@@ -120,7 +142,7 @@ export default function Dashboard() {
       } else {
         await api.completeBenefit(benefitId, year, undefined, userCardId)
       }
-      await loadData()
+      await loadData(true) // 保留展開狀態
     } catch (error) {
       console.error('Failed to toggle benefit:', error)
     }
@@ -129,7 +151,7 @@ export default function Dashboard() {
   async function updateNotificationSettings(benefitId: number, settings: { reminderDays?: number; notificationEnabled?: boolean }, userCardId: number) {
     try {
       await api.updateBenefitSettings(benefitId, year, settings, userCardId)
-      await loadData()
+      await loadData(true) // 保留展開狀態
     } catch (error) {
       console.error('Failed to update notification settings:', error)
       alert(language === 'zh-TW' ? '更新失敗' : 'Update failed')
@@ -507,35 +529,49 @@ export default function Dashboard() {
                         onClick={() => moveCard(userCard.id, 'up')}
                         disabled={index === 0}
                         style={{
-                          padding: '0.25rem 0.5rem',
-                          fontSize: '0.75rem',
+                          padding: '0.3rem 0.6rem',
+                          fontSize: '0.7rem',
                           background: index === 0 ? '#d1d5db' : '#9ca3af',
                           color: 'white',
                           border: 'none',
                           borderRadius: '4px',
                           cursor: index === 0 ? 'not-allowed' : 'pointer',
                           opacity: index === 0 ? 0.5 : 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.3rem',
+                          whiteSpace: 'nowrap',
                         }}
                         title={language === 'zh-TW' ? '往上移' : 'Move up'}
                       >
-                        ▲
+                        <span>▲</span>
+                        <span style={{ fontSize: '0.65rem' }}>
+                          {language === 'zh-TW' ? '上移' : 'Up'}
+                        </span>
                       </button>
                       <button
                         onClick={() => moveCard(userCard.id, 'down')}
                         disabled={index === userCards.length - 1}
                         style={{
-                          padding: '0.25rem 0.5rem',
-                          fontSize: '0.75rem',
+                          padding: '0.3rem 0.6rem',
+                          fontSize: '0.7rem',
                           background: index === userCards.length - 1 ? '#d1d5db' : '#9ca3af',
                           color: 'white',
                           border: 'none',
                           borderRadius: '4px',
                           cursor: index === userCards.length - 1 ? 'not-allowed' : 'pointer',
                           opacity: index === userCards.length - 1 ? 0.5 : 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.3rem',
+                          whiteSpace: 'nowrap',
                         }}
                         title={language === 'zh-TW' ? '往下移' : 'Move down'}
                       >
-                        ▼
+                        <span>▼</span>
+                        <span style={{ fontSize: '0.65rem' }}>
+                          {language === 'zh-TW' ? '下移' : 'Down'}
+                        </span>
                       </button>
                     </div>
                     <button
@@ -544,7 +580,7 @@ export default function Dashboard() {
                       style={{
                         padding: '0.5rem 1rem',
                         fontSize: '0.85rem',
-                        background: '#6b7280',
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                         color: 'white',
                         border: 'none',
                         borderRadius: '4px',
@@ -553,10 +589,10 @@ export default function Dashboard() {
                         flexShrink: 0,
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = '#4b5563'
+                        e.currentTarget.style.background = 'linear-gradient(135deg, #5568d3 0%, #653a8b 100%)'
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.background = '#6b7280'
+                        e.currentTarget.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
                       }}
                     >
                       📅 {language === 'zh-TW' ? '年費與卡片暱稱設定' : 'Card Settings'}

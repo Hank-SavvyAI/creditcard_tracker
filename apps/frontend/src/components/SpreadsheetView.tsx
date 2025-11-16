@@ -410,7 +410,7 @@ export default function SpreadsheetView() {
               backgroundColor: '#f8f9fa',
               borderBottom: '2px solid #dee2e6',
             }}>
-              <th style={headerCellStyle}>{t.cardName}</th>
+              <th style={{...headerCellStyle, position: 'sticky', left: 0, zIndex: 10, backgroundColor: '#f8f9fa', boxShadow: '2px 0 4px rgba(0,0,0,0.1)'}}>{t.cardName}</th>
               <th style={headerCellStyle}>{t.issuer}</th>
               <th style={headerCellStyle}>{t.annualFee}</th>
               <th style={headerCellStyle}>{t.afChargeDate}</th>
@@ -461,6 +461,11 @@ export default function SpreadsheetView() {
                             style={{
                               ...rowStyle,
                               verticalAlign: 'top',
+                              position: 'sticky',
+                              left: 0,
+                              zIndex: 9,
+                              backgroundColor: globalIndex % 2 === 0 ? 'white' : '#f8f9fa',
+                              boxShadow: '2px 0 4px rgba(0,0,0,0.1)',
                             }}
                             rowSpan={totalCardRows}
                           >
