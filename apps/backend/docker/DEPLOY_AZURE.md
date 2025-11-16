@@ -1264,3 +1264,49 @@ az group delete --name $RESOURCE_GROUP --yes --no-wait
 4. **使用 Azure Front Door** 作為 CDN 和 WAF
 5. **定期備份** Key Vault 和資料庫
 6. **使用 staging slots** 進行零停機部署
+
+
+## Get env variable
+```
+az containerapp show --name creditcard-backend --resource-group creditcard-rg --query "properties.template.containers[0].env" -o json | jq 'map({name: .name, value: (.value // "<secret>")}) | sort_by(.name)'
+```
+
+## 產生jwt_key
+```
+openssl rand -base64 32
+```
+
+## 設置env-vars
+```
+az containerapp update \
+  --name creditcard-backend \
+  --resource-group creditcard-rg \
+  --set-env-vars "VAPID_SUBJECT=mailto:support@savvyaihelper.com"
+```
+
+## 檢查變更版本
+```
+az containerapp revision list --name creditcard-backend --resource-group creditcard-rg --query "[].{Name:name,Active:properties.active,Created:properties.createdTime,Traffic:properties.trafficWeight}" -o table
+```
+
+## 設定line env
+```
+az containerapp secret set \
+  --name creditcard-backend \
+  --resource-group creditcard-rg \
+  --secrets \
+    line-channel-secret="3979b8559bf444abef6415dbb00a809d"
+
+az containerapp update \
+  --name creditcard-backend \
+  --resource-group creditcard-rg \
+  --set-env-vars \
+    "LINE_CHANNEL_ID=2008406377" \
+    "LINE_CHANNEL_SECRET=secretref:line-channel-secret" \
+    "LINE_CALLBACK_URL=https://creditcard-backend.salmonsmoke-562e1c06.eastus.azurecontainerapps.io/api/auth/line/callback"
+
+az containerapp revision restart \
+  --name creditcard-backend \
+  --resource-group creditcard-rg \
+  --revision creditcard-backend--0000013
+```
