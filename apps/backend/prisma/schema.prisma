@@ -106,6 +106,7 @@ model UserCard {
   cardId        Int
   cardInstance  Int             @default(1)  // 第幾張同樣的卡 (1, 2, 3, ...)
   nickname      String?
+  displayOrder  Int             @default(999) // 使用者自訂的卡片顯示順序 (數字越小越前面)
   afChargeMonth Int?            // Annual fee charge month (1-12)
   afChargeDay   Int?            // Annual fee charge day (1-31)
   openedAt      DateTime?       // Card opening date (用於計算 5/24 rule)
@@ -141,6 +142,7 @@ model UserBenefit {
   customTitleEn     String?         // 自定義福利名稱（英文）
   customAmount      Float?          // 自定義福利總金額
   customCurrency    String?         // 自定義福利幣別
+  customDescription String?         // 自定義福利描述（例如：開卡禮內容）
 
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt

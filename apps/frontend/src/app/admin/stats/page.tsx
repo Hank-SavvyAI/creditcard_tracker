@@ -134,6 +134,62 @@ export default function AdminStatsPage() {
     }
   }
 
+  async function manualTriggerCheckExpiring() {
+    if (!confirm('確定要手動執行福利到期檢查嗎？')) return
+
+    try {
+      const token = localStorage.getItem('token')
+      const headers: HeadersInit = { 'Content-Type': 'application/json' }
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/manual/check-expiring-benefits`, {
+        method: 'POST',
+        headers
+      })
+
+      if (res.ok) {
+        const result = await res.json()
+        alert(`執行成功！\n已檢查: ${result.totalChecked} 個福利\n即將到期: ${result.expiringCount || 0} 個福利\n成功通知: ${result.notificationsSent} 位使用者\n錯誤: ${result.errors}`)
+        await loadStats() // Reload stats to show new log
+      } else {
+        alert('執行失敗')
+      }
+    } catch (err) {
+      console.error(err)
+      alert('執行失敗')
+    }
+  }
+
+  async function manualTriggerArchive() {
+    if (!confirm('確定要手動執行過期福利歸檔嗎？這會將過期的福利移到歷史記錄。')) return
+
+    try {
+      const token = localStorage.getItem('token')
+      const headers: HeadersInit = { 'Content-Type': 'application/json' }
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/manual/archive-expired-benefits`, {
+        method: 'POST',
+        headers
+      })
+
+      if (res.ok) {
+        const result = await res.json()
+        alert(`執行成功！\n已歸檔: ${result.archivedCount} 個過期福利`)
+        await loadStats() // Reload stats to show new log
+      } else {
+        alert('執行失敗')
+      }
+    } catch (err) {
+      console.error(err)
+      alert('執行失敗')
+    }
+  }
+
   function formatDuration(ms: number): string {
     if (ms < 1000) return `${ms}ms`
     if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`
@@ -199,9 +255,37 @@ export default function AdminStatsPage() {
 
       {/* CronJob 統計 */}
       <section style={{ marginBottom: '3rem' }}>
-        <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          ⚙️ CronJob 執行統計
-        </h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+          <h2 style={{ fontSize: '1.5rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            ⚙️ CronJob 執行統計
+          </h2>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button
+              onClick={manualTriggerCheckExpiring}
+              className="btn btn-primary"
+              style={{
+                padding: '0.5rem 1rem',
+                fontSize: '0.9rem',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              🔍 手動檢查到期福利
+            </button>
+            <button
+              onClick={manualTriggerArchive}
+              className="btn btn-primary"
+              style={{
+                padding: '0.5rem 1rem',
+                fontSize: '0.9rem',
+                background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              📦 手動歸檔過期福利
+            </button>
+          </div>
+        </div>
 
         {cronJobStats && cronJobStats.stats.length > 0 ? (
           <>
@@ -490,7 +574,19 @@ export default function AdminStatsPage() {
                   {notificationStats.recentLogs.slice(0, 20).map((log) => (
                     <tr key={log.id} style={{ borderTop: '1px solid #e5e7eb' }}>
                       <td style={{ padding: '0.75rem', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>{formatDate(log.sentAt)}</td>
-                      <td style={{ padding: '0.75rem', fontSize: '0.85rem' }}>{log.userId}</td>
+                      <td style={{ padding: '0.75rem', fontSize: '0.85rem' }}>
+                        <Link
+                          href={`/admin/users/${log.userId}/notifications`}
+                          style={{
+                            color: '#3b82f6',
+                            textDecoration: 'underline',
+                            cursor: 'pointer',
+                            fontWeight: '500'
+                          }}
+                        >
+                          #{log.userId}
+                        </Link>
+                      </td>
                       <td style={{ padding: '0.75rem', fontSize: '0.85rem' }}>{getChannelEmoji(log.channel)} {log.channel}</td>
                       <td style={{ padding: '0.75rem', fontSize: '0.85rem' }}>{log.type}</td>
                       <td style={{ padding: '0.75rem', fontSize: '0.85rem', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{log.title}</td>

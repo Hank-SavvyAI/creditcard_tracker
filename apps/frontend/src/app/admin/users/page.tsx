@@ -395,7 +395,16 @@ export default function AdminUsersPage() {
               <tr key={user.id} style={{
                 borderBottom: '1px solid #f0f0f0',
                 transition: 'all 0.2s ease',
-                background: index % 2 === 0 ? 'white' : '#fafafa'
+                background: index % 2 === 0 ? 'white' : '#fafafa',
+                cursor: 'pointer'
+              }}
+              onClick={(e) => {
+                // Prevent navigation if clicking on button
+                if ((e.target as HTMLElement).tagName === 'BUTTON') {
+                  return;
+                }
+                console.log('Navigating to user:', user.id);
+                router.push(`/admin/users/${user.id}`);
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = 'linear-gradient(90deg, #f0f4ff 0%, #fef0ff 100%)'
@@ -460,7 +469,10 @@ export default function AdminUsersPage() {
                 <td style={{ padding: '1rem', fontWeight: '500' }}>{user.language}</td>
                 <td style={{ padding: '1rem' }}>
                   <button
-                    onClick={() => handleCardCountClick(user)}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleCardCountClick(user)
+                    }}
                     style={{
                       background: 'linear-gradient(135deg, #a8c0ff 0%, #c5d4ff 100%)',
                       border: 'none',

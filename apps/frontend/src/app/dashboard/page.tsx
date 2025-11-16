@@ -28,8 +28,13 @@ export default function Dashboard() {
   const [customAmount, setCustomAmount] = useState<number | ''>('')
   const [customCurrency, setCustomCurrency] = useState('USD')
   const [customPeriodEnd, setCustomPeriodEnd] = useState('')
+  const [customDescription, setCustomDescription] = useState('')
   const [showHiddenBenefits, setShowHiddenBenefits] = useState(false)
   const year = new Date().getFullYear()
+
+  // 懶加載：追蹤哪些卡片已展開並載入福利
+  const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set())
+  const [loadingCards, setLoadingCards] = useState<Set<number>>(new Set())
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -51,12 +56,60 @@ export default function Dashboard() {
 
   async function loadData() {
     try {
-      const data = await api.getMyBenefits(year)
-      setUserCards(data)
+      // 只載入卡片列表，不載入福利（懶加載優化）
+      const cards = await api.getMyCardsOnly()
+      // 初始化卡片，benefits 設為空陣列
+      const cardsWithEmptyBenefits = cards.map((card: any) => ({
+        ...card,
+        benefits: []
+      }))
+      setUserCards(cardsWithEmptyBenefits)
     } catch (error) {
       console.error('Failed to load data:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  // 切換卡片展開/收合，並懶加載福利
+  async function toggleCardExpansion(userCardId: number) {
+    const isExpanded = expandedCards.has(userCardId)
+
+    if (isExpanded) {
+      // 收合卡片
+      const newExpanded = new Set(expandedCards)
+      newExpanded.delete(userCardId)
+      setExpandedCards(newExpanded)
+    } else {
+      // 展開卡片
+      const newExpanded = new Set(expandedCards)
+      newExpanded.add(userCardId)
+      setExpandedCards(newExpanded)
+
+      // 檢查是否已經載入過福利
+      const card = userCards.find(c => c.id === userCardId)
+      if (!card || card.benefits.length > 0) {
+        return // 已經載入過了
+      }
+
+      // 載入福利
+      setLoadingCards(prev => new Set(prev).add(userCardId))
+      try {
+        const { benefits } = await api.getCardBenefits(userCardId, year)
+
+        // 更新這張卡片的福利
+        setUserCards(prev => prev.map(c =>
+          c.id === userCardId ? { ...c, benefits } : c
+        ))
+      } catch (error) {
+        console.error('Failed to load benefits:', error)
+      } finally {
+        setLoadingCards(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(userCardId)
+          return newSet
+        })
+      }
     }
   }
 
@@ -170,6 +223,47 @@ export default function Dashboard() {
     setCustomAmount('')
     setCustomCurrency('USD')
     setCustomPeriodEnd('')
+    setCustomDescription('')
+  }
+
+  async function moveCard(userCardId: number, direction: 'up' | 'down') {
+    const currentIndex = userCards.findIndex(uc => uc.id === userCardId)
+    if (currentIndex === -1) return
+
+    // Can't move up if already at top
+    if (direction === 'up' && currentIndex === 0) return
+    // Can't move down if already at bottom
+    if (direction === 'down' && currentIndex === userCards.length - 1) return
+
+    const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1
+
+    // Optimistic update: 立即更新 UI，不等待 API 回應
+    const newUserCards = [...userCards]
+    const [movedCard] = newUserCards.splice(currentIndex, 1)
+    newUserCards.splice(newIndex, 0, movedCard)
+
+    // 更新 displayOrder 以匹配新的位置
+    newUserCards.forEach((card, index) => {
+      card.displayOrder = index
+    })
+
+    setUserCards(newUserCards)
+
+    // Swap display orders in backend
+    const updates = [
+      { id: userCards[currentIndex].id, displayOrder: newIndex },
+      { id: userCards[newIndex].id, displayOrder: currentIndex },
+    ]
+
+    try {
+      // 背景更新，不阻塞 UI
+      await api.updateUserCardsOrder(updates)
+    } catch (error) {
+      console.error('Failed to update card order:', error)
+      alert(language === 'zh-TW' ? '排序更新失敗' : 'Failed to update card order')
+      // 如果失敗，重新載入正確的順序
+      await loadData()
+    }
   }
 
   async function saveCustomBenefit() {
@@ -186,6 +280,7 @@ export default function Dashboard() {
         customAmount: typeof customAmount === 'number' ? customAmount : 0,
         customCurrency,
         periodEnd: customPeriodEnd,
+        customDescription: customDescription.trim() || undefined,
       })
       alert(language === 'zh-TW' ? '自定義福利已新增' : 'Custom benefit added successfully')
       closeCustomBenefitModal()
@@ -258,11 +353,12 @@ export default function Dashboard() {
               style={{
                 background: showHiddenBenefits ? '#3b82f6' : '#e5e7eb',
                 color: showHiddenBenefits ? 'white' : '#374151',
+                whiteSpace: 'nowrap',
               }}
             >
               {showHiddenBenefits
-                ? (language === 'zh-TW' ? '👁️ 顯示隱藏福利' : '👁️ Show Hidden')
-                : (language === 'zh-TW' ? '🙈 隱藏福利已過濾' : '🙈 Hidden Filtered')}
+                ? (language === 'zh-TW' ? '👁️ 顯示隱藏' : '👁️ Show Hidden')
+                : (language === 'zh-TW' ? '🙈 已過濾' : '🙈 Filtered')}
             </button>
           </div>
           {isAdmin && (
@@ -297,9 +393,9 @@ export default function Dashboard() {
             const backgroundColor = index % 2 === 0 ? '#ffffff' : '#f9fafb'
 
             return (<div key={userCard.id} className="card dashboard-card" style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start', backgroundColor }}>
-              {/* 左側：卡片圖片 */}
+              {/* 左側：卡片圖片 + 展開按鈕 */}
               {userCard.card.photo && (
-                <div style={{ flexShrink: 0, width: '200px' }} className="card-image-container">
+                <div style={{ flexShrink: 0, width: '200px', display: 'flex', flexDirection: 'column', gap: '0.75rem' }} className="card-image-container">
                   <img
                     src={userCard.card.photo}
                     alt={language === 'zh-TW' ? userCard.card.name : (userCard.card.nameEn || userCard.card.name)}
@@ -318,13 +414,66 @@ export default function Dashboard() {
                       console.log('卡片圖片載入成功:', userCard.card.photo);
                     }}
                   />
+                  {/* 展開/收合按鈕 */}
+                  <button
+                        onClick={() => toggleCardExpansion(userCard.id)}
+                        style={{
+                          padding: '0.3rem 0.5rem',
+                          fontSize: '0.65rem',
+                          background: expandedCards.has(userCard.id)
+                            ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                            : 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+                          color: expandedCards.has(userCard.id) ? 'white' : '#3b82f6',
+                          border: expandedCards.has(userCard.id) ? 'none' : '1px solid #93c5fd',
+                          borderRadius: '5px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          lineHeight: 1.3,
+                          boxShadow: expandedCards.has(userCard.id)
+                            ? '0 2px 6px rgba(102, 126, 234, 0.3)'
+                            : '0 1px 3px rgba(59, 130, 246, 0.15)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.3rem',
+                          fontWeight: '500',
+                        }}
+                        onMouseEnter={(e) => {
+                          if (expandedCards.has(userCard.id)) {
+                            e.currentTarget.style.background = 'linear-gradient(135deg, #5568d3 0%, #653a8b 100%)'
+                            e.currentTarget.style.boxShadow = '0 4px 8px rgba(102, 126, 234, 0.4)'
+                          } else {
+                            e.currentTarget.style.background = 'linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%)'
+                            e.currentTarget.style.color = '#2563eb'
+                            e.currentTarget.style.borderColor = '#60a5fa'
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (expandedCards.has(userCard.id)) {
+                            e.currentTarget.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                            e.currentTarget.style.boxShadow = '0 2px 6px rgba(102, 126, 234, 0.3)'
+                          } else {
+                            e.currentTarget.style.background = 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)'
+                            e.currentTarget.style.color = '#3b82f6'
+                            e.currentTarget.style.borderColor = '#93c5fd'
+                          }
+                        }}
+                        title={expandedCards.has(userCard.id) ? (language === 'zh-TW' ? '收合福利' : 'Collapse') : (language === 'zh-TW' ? '展開福利' : 'Expand')}
+                      >
+                        <span>{expandedCards.has(userCard.id) ? '▼' : '▶'}</span>
+                        <span style={{ fontSize: '0.65rem' }}>
+                          {expandedCards.has(userCard.id)
+                            ? (language === 'zh-TW' ? '收合' : 'Hide')
+                            : (language === 'zh-TW' ? '展開福利' : 'Show')
+                          }
+                        </span>
+                      </button>
                 </div>
               )}
 
               {/* 右側：卡片資訊和福利 */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', marginBottom: '0.5rem' }}>
-                  <div>
+                  <div style={{ flex: 1 }}>
                     <h2 className="card-title" style={{ margin: 0, marginBottom: '0.25rem', fontSize: '1.5rem' }}>
                       {language === 'zh-TW' ? userCard.card.name : (userCard.card.nameEn || userCard.card.name)}
                       {userCard.nickname ? (
@@ -352,6 +501,43 @@ export default function Dashboard() {
                     )}
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    {/* Up/Down arrows for sorting */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                      <button
+                        onClick={() => moveCard(userCard.id, 'up')}
+                        disabled={index === 0}
+                        style={{
+                          padding: '0.25rem 0.5rem',
+                          fontSize: '0.75rem',
+                          background: index === 0 ? '#d1d5db' : '#9ca3af',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: index === 0 ? 'not-allowed' : 'pointer',
+                          opacity: index === 0 ? 0.5 : 1,
+                        }}
+                        title={language === 'zh-TW' ? '往上移' : 'Move up'}
+                      >
+                        ▲
+                      </button>
+                      <button
+                        onClick={() => moveCard(userCard.id, 'down')}
+                        disabled={index === userCards.length - 1}
+                        style={{
+                          padding: '0.25rem 0.5rem',
+                          fontSize: '0.75rem',
+                          background: index === userCards.length - 1 ? '#d1d5db' : '#9ca3af',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: index === userCards.length - 1 ? 'not-allowed' : 'pointer',
+                          opacity: index === userCards.length - 1 ? 0.5 : 1,
+                        }}
+                        title={language === 'zh-TW' ? '往下移' : 'Move down'}
+                      >
+                        ▼
+                      </button>
+                    </div>
                     <button
                       onClick={() => openCardSettings(userCard)}
                       className="btn btn-secondary"
@@ -424,16 +610,28 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* 福利列表 */}
-                <div style={{ marginTop: '1rem' }}>
-                  {userCard.card.benefits
-                    .filter((benefit: any) => {
-                      const userBenefit = benefit.userBenefits[0]
-                      const isHidden = userBenefit && userBenefit.isHidden
-                      return showHiddenBenefits || !isHidden
-                    })
-                    .map((benefit: any) => (
-                      <BenefitItem
+                {/* 福利列表 - 只在展開時顯示 */}
+                {expandedCards.has(userCard.id) && (
+                  <div style={{ marginTop: '1rem' }}>
+                    {loadingCards.has(userCard.id) ? (
+                      <div style={{
+                        padding: '2rem',
+                        textAlign: 'center',
+                        color: '#667eea',
+                        fontSize: '1rem',
+                        fontWeight: '500'
+                      }}>
+                        ⏳ {language === 'zh-TW' ? '載入福利中...' : 'Loading benefits...'}
+                      </div>
+                    ) : userCard.benefits && userCard.benefits.length > 0 ? (
+                      userCard.benefits
+                        .filter((benefit: any) => {
+                          const userBenefit = benefit.userBenefits?.[0]
+                          const isHidden = userBenefit && userBenefit.isHidden
+                          return showHiddenBenefits || !isHidden
+                        })
+                        .map((benefit: any) => (
+                          <BenefitItem
                         key={benefit.id}
                         benefit={benefit}
                         userCardId={userCard.id}
@@ -442,9 +640,20 @@ export default function Dashboard() {
                         onToggle={toggleBenefit}
                         onUpdateSettings={updateNotificationSettings}
                         onToggleHide={toggleHideBenefit}
-                      />
-                    ))}
-                </div>
+                          />
+                        ))
+                    ) : (
+                      <div style={{
+                        padding: '1.5rem',
+                        textAlign: 'center',
+                        color: '#888',
+                        fontSize: '0.95rem'
+                      }}>
+                        {language === 'zh-TW' ? '此卡片沒有福利' : 'No benefits for this card'}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>)
           })}
@@ -728,6 +937,41 @@ export default function Dashboard() {
                   }}
                 />
               </div>
+            </div>
+
+            {/* Description (Optional) */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{
+                display: 'block',
+                marginBottom: '0.5rem',
+                fontSize: '0.95rem',
+                fontWeight: '600',
+                color: 'var(--text-color)'
+              }}>
+                {language === 'zh-TW' ? '開卡禮內容' : 'Bonus Description'}
+                <span style={{ fontSize: '0.85rem', fontWeight: '400', color: 'var(--text-secondary)', marginLeft: '0.5rem' }}>
+                  ({language === 'zh-TW' ? '選填' : 'Optional'})
+                </span>
+              </label>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                {language === 'zh-TW'
+                  ? '記錄您獲得的開卡禮內容（例如：10,000 點紅利點數、行李箱一個、免費住宿券等）'
+                  : 'Record what you received (e.g., 10,000 bonus points, free luggage, hotel voucher, etc.)'}
+              </p>
+              <input
+                type="text"
+                value={customDescription}
+                onChange={(e) => setCustomDescription(e.target.value)}
+                placeholder={language === 'zh-TW' ? '例如：10,000 點紅利點數' : 'e.g., 10,000 bonus points'}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color)',
+                  fontSize: '1rem',
+                  backgroundColor: 'var(--card-bg)'
+                }}
+              />
             </div>
 
             {/* Period End Date */}

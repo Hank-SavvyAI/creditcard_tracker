@@ -30,19 +30,27 @@ export async function checkAndNotifyExpiringBenefits() {
       },
     });
 
-    let notificationsSent = 0;
-    let errors = 0;
-    const errorMessages: string[] = [];
+    // 第一步：過濾出需要提醒的福利
+    const expiringBenefits: Array<{
+      userBenefit: any;
+      benefit: any;
+      benefitId: number;
+      daysRemaining: number;
+    }> = [];
 
     for (const userBenefit of userBenefits) {
       if (!userBenefit.periodEnd) continue;
+
+      // Skip if benefit is hidden or notification is disabled
+      if (userBenefit.isHidden || !userBenefit.notificationEnabled) {
+        continue;
+      }
 
       // Skip custom benefits or benefits without associated benefit data
       if (userBenefit.isCustom || !userBenefit.benefit || !userBenefit.benefitId) {
         continue;
       }
 
-      // Type guard: at this point we know benefit and benefitId exist
       const benefit = userBenefit.benefit;
       const benefitId = userBenefit.benefitId;
 
@@ -59,38 +67,93 @@ export async function checkAndNotifyExpiringBenefits() {
           (userBenefit.periodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
         );
 
-        const title = '💳 信用卡福利即將到期';
-        const body = `您的 ${benefit.card.name} - ${benefit.title} 還有 ${daysRemaining} 天到期（${userBenefit.periodEnd.toLocaleDateString('zh-TW')}）`;
+        expiringBenefits.push({
+          userBenefit,
+          benefit,
+          benefitId,
+          daysRemaining,
+        });
+      }
+    }
 
-        try {
-          const result = await sendNotification({
-            userId: userBenefit.userId,
-            title,
-            body,
-            benefitId: benefitId,
-            notificationType: 'benefit-expiration',
-            data: {
-              userBenefitId: userBenefit.id,
-              benefitId: benefitId,
-              daysRemaining,
-            },
-          });
+    // 第二步：按使用者分組
+    const benefitsByUser = new Map<number, typeof expiringBenefits>();
+    for (const item of expiringBenefits) {
+      const userId = item.userBenefit.userId;
+      if (!benefitsByUser.has(userId)) {
+        benefitsByUser.set(userId, []);
+      }
+      benefitsByUser.get(userId)!.push(item);
+    }
 
-          if (result.success) {
-            notificationsSent++;
-            console.log(`✅ Sent notification to user ${userBenefit.userId} for benefit ${benefit.title}`);
-          } else {
-            errors++;
-            const errorMsg = `User ${userBenefit.userId}: ${result.results?.errors?.join(', ') || 'Unknown error'}`;
-            errorMessages.push(errorMsg);
-            console.error(`❌ Failed to send notification to user ${userBenefit.userId}:`, result.results?.errors);
-          }
-        } catch (error: any) {
+    // 第三步：每個使用者發送一次通知（包含所有即將到期的福利）
+    let notificationsSent = 0;
+    let errors = 0;
+    const errorMessages: string[] = [];
+
+    // 🧪 測試模式：只發送給使用者 ID 3
+    const TEST_MODE = process.env.NOTIFICATION_TEST_MODE === 'true';
+    const TEST_USER_ID = 3;
+
+    if (TEST_MODE) {
+      console.log('🧪 TEST MODE: Only sending notifications to user ID 3');
+    }
+
+    for (const [userId, benefits] of benefitsByUser.entries()) {
+      // 🧪 測試模式：跳過非測試使用者
+      if (TEST_MODE && userId !== TEST_USER_ID) {
+        console.log(`⏭️  Skipping user ${userId} (test mode enabled, only sending to user ${TEST_USER_ID})`);
+        continue;
+      }
+      try {
+        // 建立通知內容
+        const title = `💳 ${benefits.length} 個信用卡福利即將到期`;
+
+        // 按到期日排序（最近到期的在前）
+        benefits.sort((a, b) => a.daysRemaining - b.daysRemaining);
+
+        // 建立福利清單
+        const benefitList = benefits.map(item => {
+          const cardName = item.benefit.card.name;
+          const benefitTitle = item.benefit.title;
+          const days = item.daysRemaining;
+          const date = item.userBenefit.periodEnd.toLocaleDateString('zh-TW');
+          return `• ${cardName} - ${benefitTitle}\n  還有 ${days} 天到期 (${date})`;
+        }).join('\n\n');
+
+        const body = `您有 ${benefits.length} 個福利即將到期：\n\n${benefitList}`;
+
+        // 發送通知
+        const result = await sendNotification({
+          userId,
+          title,
+          body,
+          benefitId: benefits[0].benefitId, // 使用第一個福利的 ID
+          notificationType: 'benefit-expiration',
+          data: {
+            benefitCount: benefits.length,
+            benefits: benefits.map(b => ({
+              userBenefitId: b.userBenefit.id,
+              benefitId: b.benefitId,
+              daysRemaining: b.daysRemaining,
+            })),
+          },
+        });
+
+        if (result.success) {
+          notificationsSent++;
+          console.log(`✅ Sent notification to user ${userId} for ${benefits.length} expiring benefits`);
+        } else {
           errors++;
-          const errorMsg = `User ${userBenefit.userId}: ${error.message}`;
+          const errorMsg = `User ${userId}: ${result.results?.errors?.join(', ') || 'Unknown error'}`;
           errorMessages.push(errorMsg);
-          console.error(`❌ Error sending notification to user ${userBenefit.userId}:`, error);
+          console.error(`❌ Failed to send notification to user ${userId}:`, result.results?.errors);
         }
+      } catch (error: any) {
+        errors++;
+        const errorMsg = `User ${userId}: ${error.message}`;
+        errorMessages.push(errorMsg);
+        console.error(`❌ Error sending notification to user ${userId}:`, error);
       }
     }
 
@@ -106,25 +169,36 @@ export async function checkAndNotifyExpiringBenefits() {
         startedAt: startTime,
         completedAt: endTime,
         durationMs,
-        itemsProcessed: userBenefits.length,
-        successCount: notificationsSent,
+        itemsProcessed: expiringBenefits.length, // 即將到期的福利總數
+        successCount: notificationsSent, // 成功發送通知的使用者數
         failureCount: errors,
         errorMessage: errorMessages.length > 0 ? errorMessages.join('\n') : null,
         details: JSON.stringify({
-          totalBenefits: userBenefits.length,
-          notificationsSent,
+          totalBenefitsChecked: userBenefits.length,
+          expiringBenefits: expiringBenefits.length,
+          usersNotified: notificationsSent,
           errors,
+          testMode: TEST_MODE,
+          testUserId: TEST_MODE ? TEST_USER_ID : null,
         }),
       },
     });
 
-    console.log(`✅ Benefit expiration check complete: ${notificationsSent} notifications sent, ${errors} errors`);
+    console.log(`✅ Benefit expiration check complete:`);
+    console.log(`   - Checked: ${userBenefits.length} benefits`);
+    console.log(`   - Expiring: ${expiringBenefits.length} benefits`);
+    console.log(`   - Users notified: ${notificationsSent}`);
+    console.log(`   - Errors: ${errors}`);
+    if (TEST_MODE) {
+      console.log(`   - 🧪 TEST MODE: Only sent to user ${TEST_USER_ID}`);
+    }
 
     return {
       success: true,
-      notificationsSent,
-      errors,
-      totalChecked: userBenefits.length,
+      notificationsSent, // 成功發送通知的使用者數量
+      errors, // 失敗的使用者數量
+      totalChecked: userBenefits.length, // 檢查的福利總數
+      expiringCount: expiringBenefits.length, // 即將到期的福利數量
     };
   } catch (error: any) {
     console.error('❌ Failed to check expiring benefits:', error);

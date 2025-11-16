@@ -303,16 +303,31 @@ router.get('/users/:userId/cards', async (req: AuthRequest, res) => {
           include: {
             benefits: true
           }
+        },
+        userBenefits: {
+          include: {
+            benefit: true
+          },
+          orderBy: {
+            createdAt: 'desc'
+          }
         }
       },
       orderBy: {
-        addedAt: 'desc'
+        displayOrder: 'asc'
       }
     });
 
-    // Return userCards with card details
+    // Return userCards with card details and user benefits
     const formattedCards = userCards.map(uc => ({
       id: uc.id,
+      nickname: uc.nickname,
+      cardInstance: uc.cardInstance,
+      afChargeMonth: uc.afChargeMonth,
+      afChargeDay: uc.afChargeDay,
+      openedAt: uc.openedAt,
+      addedAt: uc.addedAt,
+      displayOrder: uc.displayOrder,
       card: {
         id: uc.card.id,
         name: uc.card.name,
@@ -320,11 +335,39 @@ router.get('/users/:userId/cards', async (req: AuthRequest, res) => {
         bank: uc.card.bank,
         bankEn: uc.card.bankEn,
         region: uc.card.region,
+        type: uc.card.type,
+        photo: uc.card.photo,
+        fee: uc.card.fee,
         _count: {
           benefits: uc.card.benefits.length
         }
       },
-      addedAt: uc.addedAt
+      userBenefits: uc.userBenefits.map(ub => ({
+        id: ub.id,
+        benefitId: ub.benefitId,
+        year: ub.year,
+        cycleNumber: ub.cycleNumber,
+        periodEnd: ub.periodEnd,
+        isCompleted: ub.isCompleted,
+        completedAt: ub.completedAt,
+        usedAmount: ub.usedAmount,
+        notes: ub.notes,
+        isHidden: ub.isHidden,
+        isCustom: ub.isCustom,
+        customTitle: ub.customTitle,
+        customAmount: ub.customAmount,
+        customCurrency: ub.customCurrency,
+        customDescription: ub.customDescription,
+        createdAt: ub.createdAt,
+        benefit: ub.benefit ? {
+          id: ub.benefit.id,
+          title: ub.benefit.title,
+          titleEn: ub.benefit.titleEn,
+          amount: ub.benefit.amount,
+          currency: ub.benefit.currency,
+          cycleType: ub.benefit.cycleType,
+        } : null
+      }))
     }));
 
     res.json(formattedCards);
@@ -509,6 +552,92 @@ router.get('/notification-stats', async (req: AuthRequest, res) => {
     });
   } catch (error: any) {
     console.error('Error fetching notification stats:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get single user details (admin only)
+router.get('/users/:userId', async (req: AuthRequest, res) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await prisma.user.findUnique({
+      where: { id: parseInt(userId) },
+      select: {
+        id: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        telegramId: true,
+        lineId: true,
+        googleId: true,
+        role: true,
+        tier: true,
+        language: true,
+        createdAt: true,
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json(user);
+  } catch (error: any) {
+    console.error('Error fetching user:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get user's notification history (admin only)
+router.get('/users/:userId/notifications', async (req: AuthRequest, res) => {
+  try {
+    const { userId } = req.params;
+    const { limit = 50, offset = 0 } = req.query;
+
+    const notifications = await prisma.notificationLog.findMany({
+      where: {
+        userId: parseInt(userId)
+      },
+      orderBy: {
+        sentAt: 'desc'
+      },
+      take: parseInt(limit as string),
+      skip: parseInt(offset as string)
+    });
+
+    const total = await prisma.notificationLog.count({
+      where: {
+        userId: parseInt(userId)
+      }
+    });
+
+    // Get user info
+    const user = await prisma.user.findUnique({
+      where: { id: parseInt(userId) },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        telegramId: true,
+        lineId: true,
+        role: true,
+        tier: true,
+      }
+    });
+
+    res.json({
+      user,
+      notifications,
+      total,
+      limit: parseInt(limit as string),
+      offset: parseInt(offset as string),
+    });
+  } catch (error: any) {
+    console.error('Error fetching user notifications:', error);
     res.status(500).json({ error: error.message });
   }
 });

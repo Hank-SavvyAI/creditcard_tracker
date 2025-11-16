@@ -145,11 +145,32 @@ async function findOrCreateUserBenefit(
   return userBenefit;
 }
 
+// Get user cards only (without benefits) for lazy loading
+router.get('/my/cards-only', authenticate, async (req: AuthRequest, res) => {
+  try {
+    const userCards = await prisma.userCard.findMany({
+      where: { userId: req.user!.id },
+      include: {
+        card: true,
+      },
+      orderBy: {
+        displayOrder: 'asc',
+      },
+    });
+
+    res.json(userCards);
+  } catch (error: any) {
+    console.error('Error fetching user cards:', error);
+    res.status(500).json({ error: 'Failed to fetch cards' });
+  }
+});
+
 // Get user's benefits (from their cards)
 router.get('/my', authenticate, async (req: AuthRequest, res) => {
   try {
     const year = parseInt(req.query.year as string) || new Date().getFullYear();
 
+    // Query 1: Get user cards with card details and benefits
     const userCards = await prisma.userCard.findMany({
       where: { userId: req.user!.id },
       include: {
@@ -157,98 +178,208 @@ router.get('/my', authenticate, async (req: AuthRequest, res) => {
           include: {
             benefits: {
               where: { isActive: true },
-              include: {
-                userBenefits: {
-                  where: {
-                    userCardId: undefined, // Will be set below
-                    year,
-                  },
-                },
-              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        card: {
+          displayPriority: 'asc',
+        },
+      },
+    });
+
+    if (userCards.length === 0) {
+      return res.json([]);
+    }
+
+    const userCardIds = userCards.map(uc => uc.id);
+
+    // Query 2: Batch fetch all userBenefits for all cards in ONE query
+    const allUserBenefits = await prisma.userBenefit.findMany({
+      where: {
+        userId: req.user!.id,
+        userCardId: { in: userCardIds },
+        year,
+        isCustom: false,
+      },
+      include: {
+        usages: {
+          orderBy: { usedAt: 'desc' }
+        }
+      }
+    });
+
+    // Query 3: Batch fetch all custom benefits in ONE query
+    const allCustomBenefits = await prisma.userBenefit.findMany({
+      where: {
+        userId: req.user!.id,
+        userCardId: { in: userCardIds },
+        isCustom: true,
+      },
+      include: {
+        usages: {
+          orderBy: { usedAt: 'desc' }
+        }
+      }
+    });
+
+    // Create lookup maps for O(1) access
+    const userBenefitsByCardAndBenefit = new Map<string, any[]>();
+    allUserBenefits.forEach(ub => {
+      const key = `${ub.userCardId}-${ub.benefitId}`;
+      if (!userBenefitsByCardAndBenefit.has(key)) {
+        userBenefitsByCardAndBenefit.set(key, []);
+      }
+      userBenefitsByCardAndBenefit.get(key)!.push(ub);
+    });
+
+    const customBenefitsByCard = new Map<number, any[]>();
+    allCustomBenefits.forEach(ub => {
+      if (!customBenefitsByCard.has(ub.userCardId)) {
+        customBenefitsByCard.set(ub.userCardId, []);
+      }
+      customBenefitsByCard.get(ub.userCardId)!.push(ub);
+    });
+
+    // Build response using in-memory data (no more queries!)
+    const result = userCards.map((userCard) => {
+      // Map regular benefits with their userBenefits
+      const benefits = userCard.card.benefits.map((benefit) => {
+        const key = `${userCard.id}-${benefit.id}`;
+        const userBenefits = userBenefitsByCardAndBenefit.get(key) || [];
+        return {
+          ...benefit,
+          userBenefits,
+        };
+      });
+
+      // Map custom benefits
+      const customUserBenefits = customBenefitsByCard.get(userCard.id) || [];
+      const customBenefits = customUserBenefits.map((ub) => ({
+        id: ub.id,
+        title: ub.customTitle || 'Custom Benefit',
+        titleEn: ub.customTitleEn || ub.customTitle || 'Custom Benefit',
+        category: 'Custom',
+        categoryEn: 'Custom',
+        amount: ub.customAmount || 0,
+        currency: ub.customCurrency || 'USD',
+        frequency: null,
+        reminderDays: 30,
+        endMonth: null,
+        endDay: null,
+        cardId: userCard.card.id,
+        isActive: true,
+        createdAt: ub.createdAt,
+        updatedAt: ub.updatedAt,
+        userBenefits: [ub],
+      }));
+
+      return {
+        ...userCard,
+        card: {
+          ...userCard.card,
+          benefits: [...benefits, ...customBenefits],
+        },
+      };
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error('Failed to fetch benefits:', error);
+    res.status(500).json({ error: 'Failed to fetch benefits' });
+  }
+});
+
+// Get benefits for a specific user card (for lazy loading)
+router.get('/card/:userCardId', authenticate, async (req: AuthRequest, res) => {
+  try {
+    const userCardId = parseInt(req.params.userCardId);
+    const year = parseInt(req.query.year as string) || new Date().getFullYear();
+
+    // Verify card belongs to user
+    const userCard = await prisma.userCard.findFirst({
+      where: {
+        id: userCardId,
+        userId: req.user!.id,
+      },
+      include: {
+        card: {
+          include: {
+            benefits: {
+              where: { isActive: true },
             },
           },
         },
       },
     });
 
-    // Fix the userBenefits for each card to only show benefits for that specific UserCard
-    const fixedUserCards = await Promise.all(
-      userCards.map(async (userCard) => {
-        // Get regular card benefits
-        const benefits = await Promise.all(
-          userCard.card.benefits.map(async (benefit) => {
-            const userBenefits = await prisma.userBenefit.findMany({
-              where: {
-                userCardId: userCard.id,
-                benefitId: benefit.id,
-                year,
-              },
-              include: {
-                usages: {
-                  orderBy: {
-                    usedAt: 'desc'
-                  }
-                }
-              }
-            });
-            return {
-              ...benefit,
-              userBenefits,
-            };
-          })
-        );
+    if (!userCard) {
+      return res.status(404).json({ error: 'Card not found' });
+    }
 
-        // Get custom benefits for this card
-        const customUserBenefits = await prisma.userBenefit.findMany({
-          where: {
-            userCardId: userCard.id,
-            userId: req.user!.id,
-            isCustom: true,
-          },
-          include: {
-            usages: {
-              orderBy: {
-                usedAt: 'desc'
-              }
-            }
-          }
-        });
+    // Fetch userBenefits for this card
+    const userBenefits = await prisma.userBenefit.findMany({
+      where: {
+        userId: req.user!.id,
+        userCardId: userCardId,
+        year,
+        isCustom: false,
+      },
+      include: {
+        usages: {
+          orderBy: { usedAt: 'desc' }
+        }
+      }
+    });
 
-        // Transform custom benefits to match the Benefit structure
-        const customBenefits = customUserBenefits.map((ub) => ({
-          id: ub.id, // Use userBenefit id as benefit id for custom benefits
-          title: ub.customTitle || 'Custom Benefit',
-          titleEn: ub.customTitleEn || ub.customTitle || 'Custom Benefit',
-          category: 'Custom',
-          categoryEn: 'Custom',
-          amount: ub.customAmount || 0,
-          currency: ub.customCurrency || 'USD',
-          frequency: null,
-          reminderDays: 30,
-          endMonth: null,
-          endDay: null,
-          cardId: userCard.card.id,
-          isActive: true,
-          createdAt: ub.createdAt,
-          updatedAt: ub.updatedAt,
-          userBenefits: [ub], // Include the custom userBenefit itself
-        }));
+    // Fetch custom benefits
+    const customBenefits = await prisma.userBenefit.findMany({
+      where: {
+        userId: req.user!.id,
+        userCardId: userCardId,
+        isCustom: true,
+      },
+      include: {
+        usages: {
+          orderBy: { usedAt: 'desc' }
+        }
+      }
+    });
 
-        // Combine regular and custom benefits
-        const allBenefits = [...benefits, ...customBenefits];
+    // Map benefits with userBenefits
+    const benefitsWithUsers = userCard.card.benefits.map((benefit) => {
+      const matchingUserBenefits = userBenefits.filter(ub => ub.benefitId === benefit.id);
+      return {
+        ...benefit,
+        userBenefits: matchingUserBenefits,
+      };
+    });
 
-        return {
-          ...userCard,
-          card: {
-            ...userCard.card,
-            benefits: allBenefits,
-          },
-        };
-      })
-    );
+    // Map custom benefits
+    const customBenefitsFormatted = customBenefits.map((ub) => ({
+      id: ub.id,
+      title: ub.customTitle || 'Custom Benefit',
+      titleEn: ub.customTitleEn || ub.customTitle || 'Custom Benefit',
+      category: 'Custom',
+      categoryEn: 'Custom',
+      amount: ub.customAmount || 0,
+      currency: ub.customCurrency || 'USD',
+      frequency: null,
+      reminderDays: 30,
+      endMonth: null,
+      endDay: null,
+      cycleType: null,
+      isActive: true,
+      isCustom: true,
+      userBenefits: [ub],
+    }));
 
-    res.json(fixedUserCards);
-  } catch (error) {
+    res.json({
+      benefits: [...benefitsWithUsers, ...customBenefitsFormatted],
+    });
+  } catch (error: any) {
+    console.error('Error fetching card benefits:', error);
     res.status(500).json({ error: 'Failed to fetch benefits' });
   }
 });
@@ -775,7 +906,7 @@ router.get('/history', authenticate, async (req: AuthRequest, res) => {
 // Create custom benefit (signup bonus, renewal bonus, etc.)
 router.post('/custom', authenticate, async (req: AuthRequest, res) => {
   try {
-    const { userCardId, customTitle, customTitleEn, customAmount, customCurrency, periodEnd } = req.body;
+    const { userCardId, customTitle, customTitleEn, customAmount, customCurrency, periodEnd, customDescription } = req.body;
 
     if (!userCardId || !customTitle || !customAmount || !customCurrency || !periodEnd) {
       return res.status(400).json({ error: 'Missing required fields' });
@@ -808,6 +939,7 @@ router.post('/custom', authenticate, async (req: AuthRequest, res) => {
         customTitleEn: customTitleEn || customTitle,
         customAmount,
         customCurrency,
+        customDescription: customDescription || null, // 開卡禮描述（選填）
         isCompleted: false,
         usedAmount: 0,
       },
@@ -824,7 +956,7 @@ router.post('/custom', authenticate, async (req: AuthRequest, res) => {
 router.put('/custom/:id', authenticate, async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;
-    const { customTitle, customTitleEn, customAmount, customCurrency, periodEnd } = req.body;
+    const { customTitle, customTitleEn, customAmount, customCurrency, periodEnd, customDescription } = req.body;
 
     // Verify this is a custom benefit owned by the user
     const existingBenefit = await prisma.userBenefit.findFirst({
@@ -844,6 +976,7 @@ router.put('/custom/:id', authenticate, async (req: AuthRequest, res) => {
     if (customTitleEn !== undefined) updateData.customTitleEn = customTitleEn;
     if (customAmount !== undefined) updateData.customAmount = customAmount;
     if (customCurrency !== undefined) updateData.customCurrency = customCurrency;
+    if (customDescription !== undefined) updateData.customDescription = customDescription;
     if (periodEnd !== undefined) {
       updateData.periodEnd = new Date(periodEnd);
       updateData.year = new Date(periodEnd).getFullYear();

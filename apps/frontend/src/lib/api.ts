@@ -87,6 +87,17 @@ export class ApiClient {
     return this.request(`/api/benefits/my${query}`);
   }
 
+  // 只載入卡片列表（不含福利）
+  async getMyCardsOnly() {
+    return this.request('/api/benefits/my/cards-only');
+  }
+
+  // 載入單張卡片的福利
+  async getCardBenefits(userCardId: number, year?: number) {
+    const query = year ? `?year=${year}` : '';
+    return this.request(`/api/benefits/card/${userCardId}${query}`);
+  }
+
   async completeBenefit(benefitId: number, year?: number, notes?: string, userCardId?: number) {
     return this.request(`/api/benefits/${benefitId}/complete`, {
       method: 'POST',
@@ -129,6 +140,7 @@ export class ApiClient {
     customAmount: number;
     customCurrency: string;
     periodEnd: string;
+    customDescription?: string;
   }) {
     return this.request('/api/benefits/custom', {
       method: 'POST',
@@ -142,6 +154,7 @@ export class ApiClient {
     customAmount?: number;
     customCurrency?: string;
     periodEnd?: string;
+    customDescription?: string;
   }) {
     return this.request(`/api/benefits/custom/${id}`, {
       method: 'PUT',
@@ -152,6 +165,13 @@ export class ApiClient {
   async deleteCustomBenefit(id: number) {
     return this.request(`/api/benefits/custom/${id}`, {
       method: 'DELETE',
+    });
+  }
+
+  async updateUserCardsOrder(updates: { id: number; displayOrder: number }[]) {
+    return this.request('/api/cards/my/order', {
+      method: 'PATCH',
+      body: JSON.stringify({ updates }),
     });
   }
 

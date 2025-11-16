@@ -83,11 +83,10 @@ router.get('/my', authenticate, async (req: AuthRequest, res) => {
           },
         },
       },
-      orderBy: {
-        card: {
-          displayPriority: 'asc', // Lower number = higher priority
-        },
-      },
+      orderBy: [
+        { displayOrder: 'asc' }, // User's custom order first
+        { card: { displayPriority: 'asc' } }, // Then by card's default priority
+      ],
     });
     res.json(userCards);
   } catch (error) {
@@ -140,6 +139,45 @@ router.post('/my', authenticate, async (req: AuthRequest, res) => {
   } catch (error) {
     console.error('Failed to add card:', error);
     res.status(500).json({ error: 'Failed to add card' });
+  }
+});
+
+// Update user cards display order
+router.patch('/my/order', authenticate, async (req: AuthRequest, res) => {
+  try {
+    const { updates } = req.body;
+
+    if (!Array.isArray(updates) || updates.length === 0) {
+      return res.status(400).json({ error: 'Invalid updates format' });
+    }
+
+    // Verify all cards belong to the user
+    const userCardIds = updates.map((u: any) => u.id);
+    const userCards = await prisma.userCard.findMany({
+      where: {
+        id: { in: userCardIds },
+        userId: req.user!.id,
+      },
+    });
+
+    if (userCards.length !== userCardIds.length) {
+      return res.status(403).json({ error: 'Some cards do not belong to you' });
+    }
+
+    // Update all card orders in a transaction
+    await prisma.$transaction(
+      updates.map((update: { id: number; displayOrder: number }) =>
+        prisma.userCard.update({
+          where: { id: update.id },
+          data: { displayOrder: update.displayOrder },
+        })
+      )
+    );
+
+    res.json({ success: true, updated: updates.length });
+  } catch (error) {
+    console.error('Failed to update card order:', error);
+    res.status(500).json({ error: 'Failed to update card order' });
   }
 });
 
