@@ -7,7 +7,6 @@ import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { api } from '@/lib/api'
 
-export const runtime = 'edge'
 
 export default function EditBenefitPage() {
   const router = useRouter()

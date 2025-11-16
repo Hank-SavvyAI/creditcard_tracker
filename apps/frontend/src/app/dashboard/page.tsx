@@ -165,7 +165,7 @@ export default function Dashboard() {
       } else {
         await api.hideBenefit(benefitId, year, userCardId)
       }
-      await loadData()
+      await loadData(true)
     } catch (error) {
       console.error('Failed to toggle benefit visibility:', error)
       alert(language === 'zh-TW' ? '操作失敗' : 'Operation failed')
@@ -184,7 +184,7 @@ export default function Dashboard() {
     try {
       await api.removeCard(userCardId)
       alert(language === 'zh-TW' ? '已移除追蹤' : 'Card removed successfully')
-      await loadData()
+      await loadData(true)
     } catch (error) {
       console.error('Failed to remove card:', error)
       alert(language === 'zh-TW' ? '移除失敗' : 'Failed to remove card')
@@ -221,7 +221,7 @@ export default function Dashboard() {
       })
       alert(language === 'zh-TW' ? '設定已儲存' : 'Settings saved successfully')
       closeCardSettings()
-      await loadData()
+      await loadData(true)
     } catch (error) {
       console.error('Failed to save card settings:', error)
       alert(language === 'zh-TW' ? '儲存失敗' : 'Failed to save settings')
@@ -284,7 +284,7 @@ export default function Dashboard() {
       console.error('Failed to update card order:', error)
       alert(language === 'zh-TW' ? '排序更新失敗' : 'Failed to update card order')
       // 如果失敗，重新載入正確的順序
-      await loadData()
+      await loadData(true)
     }
   }
 
@@ -306,7 +306,7 @@ export default function Dashboard() {
       })
       alert(language === 'zh-TW' ? '自定義福利已新增' : 'Custom benefit added successfully')
       closeCustomBenefitModal()
-      await loadData()
+      await loadData(true)
     } catch (error) {
       console.error('Failed to save custom benefit:', error)
       alert(language === 'zh-TW' ? '新增失敗' : 'Failed to add custom benefit')
@@ -411,10 +411,19 @@ export default function Dashboard() {
             const sameCards = userCards.filter(uc => uc.card.id === userCard.card.id)
             const showCardInstance = sameCards.length > 1
 
-            // Alternate background colors
-            const backgroundColor = index % 2 === 0 ? '#ffffff' : '#f9fafb'
+            // Alternate background colors with stronger contrast
+            const backgroundColor = index % 2 === 0 ? '#ffffff' : '#f0f4f8'
+            const borderColor = index % 2 === 0 ? '#3b82f6' : '#2563eb'  // 深藍色
+            const borderWidth = '3px'
 
-            return (<div key={userCard.id} className="card dashboard-card" style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start', backgroundColor }}>
+            return (<div key={userCard.id} className="card dashboard-card" style={{
+              display: 'flex',
+              gap: '1.5rem',
+              alignItems: 'flex-start',
+              backgroundColor,
+              border: `${borderWidth} solid ${borderColor}`,
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)'
+            }}>
               {/* 左側：卡片圖片 + 展開按鈕 */}
               {userCard.card.photo && (
                 <div style={{ flexShrink: 0, width: '200px', display: 'flex', flexDirection: 'column', gap: '0.75rem' }} className="card-image-container">

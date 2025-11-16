@@ -1,0 +1,98 @@
+{
+  "definition": {
+    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "backendUrl": {
+        "type": "string",
+        "defaultValue": "https://creditcard-backend.nicegrass-89a03ce3.japaneast.azurecontainerapps.io"
+      },
+      "adminToken": {
+        "type": "securestring"
+      }
+    },
+    "triggers": {
+      "Recurrence": {
+        "type": "Recurrence",
+        "recurrence": {
+          "frequency": "Day",
+          "interval": 1,
+          "schedule": {
+            "hours": [
+              "9"
+            ],
+            "minutes": [
+              0
+            ]
+          },
+          "timeZone": "Asia/Taipei"
+        }
+      }
+    },
+    "actions": {
+      "HTTP_Check_Expiring_Benefits": {
+        "type": "Http",
+        "inputs": {
+          "method": "POST",
+          "uri": "https://creditcard-backend.salmonsmoke-562e1c06.eastus.azurecontainerapps.io/api/admin/manual/check-expiring-benefits",
+          "headers": {
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Mywicm9sZSI6IkFETUlOIiwiaWF0IjoxNzYzMjgwMjEzLCJleHAiOjIwNzg4NTYyMTN9.DVcbVEKcFn3RFW17nd62s5tzQPbH_CwsFgSvJ54hOf0",
+            "Content-Type": "application/json"
+          }
+        },
+        "runAfter": {}
+      },
+      "Log_Response": {
+        "type": "Compose",
+        "inputs": {
+          "timestamp": "@{utcNow()}",
+          "status": "@{outputs('HTTP_Check_Expiring_Benefits')['statusCode']}",
+          "body": "@{body('HTTP_Check_Expiring_Benefits')}"
+        },
+        "runAfter": {
+          "HTTP_Check_Expiring_Benefits": [
+            "Succeeded",
+            "Failed"
+          ]
+        }
+      },
+      "Condition_Check_Failed": {
+        "type": "If",
+        "expression": {
+          "or": [
+            {
+              "equals": [
+                "@outputs('HTTP_Check_Expiring_Benefits')['statusCode']",
+                500
+              ]
+            },
+            {
+              "equals": [
+                "@outputs('HTTP_Check_Expiring_Benefits')['statusCode']",
+                401
+              ]
+            }
+          ]
+        },
+        "actions": {
+          "Terminate_Failed": {
+            "type": "Terminate",
+            "inputs": {
+              "runStatus": "Failed",
+              "runError": {
+                "code": "@{outputs('HTTP_Check_Expiring_Benefits')['statusCode']}",
+                "message": "Failed to check expiring benefits"
+              }
+            }
+          }
+        },
+        "runAfter": {
+          "Log_Response": [
+            "Succeeded"
+          ]
+        }
+      }
+    },
+    "outputs": {}
+  }
+}

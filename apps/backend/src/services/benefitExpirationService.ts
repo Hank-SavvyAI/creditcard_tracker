@@ -38,43 +38,96 @@ export async function checkAndNotifyExpiringBenefits() {
       daysRemaining: number;
     }> = [];
 
+    console.log(`📋 開始檢查 ${userBenefits.length} 個福利...`);
+
     for (const userBenefit of userBenefits) {
-      if (!userBenefit.periodEnd) continue;
+      const cardName = userBenefit.benefit?.card?.name || 'Unknown';
+      const benefitTitle = userBenefit.benefit?.title || 'Unknown';
+      const logPrefix = `[UserBenefit ID: ${userBenefit.id}] [Benefit ID: ${userBenefit.benefitId}] [User ID: ${userBenefit.userId}] ${cardName} - ${benefitTitle}:`;
+
+      if (!userBenefit.periodEnd) {
+        console.log(`⏭️  ${logPrefix} 跳過 - 沒有 periodEnd`);
+        continue;
+      }
 
       // Skip if benefit is hidden or notification is disabled
-      if (userBenefit.isHidden || !userBenefit.notificationEnabled) {
+      if (userBenefit.isHidden) {
+        console.log(`⏭️  ${logPrefix} 跳過 - 福利已隱藏`);
+        continue;
+      }
+
+      if (!userBenefit.notificationEnabled) {
+        console.log(`⏭️  ${logPrefix} 跳過 - 通知已關閉`);
         continue;
       }
 
       // Skip custom benefits or benefits without associated benefit data
-      if (userBenefit.isCustom || !userBenefit.benefit || !userBenefit.benefitId) {
+      if (userBenefit.isCustom) {
+        console.log(`⏭️  ${logPrefix} 跳過 - 自訂福利`);
+        continue;
+      }
+
+      if (!userBenefit.benefit || !userBenefit.benefitId) {
+        console.log(`⏭️  ${logPrefix} 跳過 - 沒有關聯的福利資料`);
         continue;
       }
 
       const benefit = userBenefit.benefit;
       const benefitId = userBenefit.benefitId;
 
-      // 計算提醒天數（使用自訂值或 Benefit 預設值）
-      const reminderDays = userBenefit.reminderDays ?? benefit.reminderDays;
+      // 計算剩餘天數
+      const daysUntilExpiry = Math.ceil(
+        (userBenefit.periodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+      );
 
-      // 計算提醒日期
-      const reminderDate = new Date(userBenefit.periodEnd);
-      reminderDate.setDate(reminderDate.getDate() - reminderDays);
+      // 使用者設定的提醒天數
+      const userReminderDays = userBenefit.reminderDays ?? benefit.reminderDays;
 
-      // 如果現在已經到了提醒日期，且還沒超過到期日
-      if (now >= reminderDate && now <= userBenefit.periodEnd) {
-        const daysRemaining = Math.ceil(
-          (userBenefit.periodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-        );
+      // 漸進式提醒邏輯：
+      // 1. 第一次通知：使用者設定的天數
+      // 2. 後續通知：3天 和 1天（只在使用者設定 >= 該天數時才觸發）
+      const shouldNotify =
+        daysUntilExpiry === userReminderDays ||  // 第一次通知
+        (daysUntilExpiry === 3 && userReminderDays >= 3) ||  // 3天提醒
+        daysUntilExpiry === 1;  // 最後1天一定提醒
+
+      if (shouldNotify && daysUntilExpiry > 0) {
+        let notifyReason = '';
+        if (daysUntilExpiry === userReminderDays) {
+          notifyReason = `第一次提醒 (使用者設定 ${userReminderDays} 天)`;
+        } else if (daysUntilExpiry === 3) {
+          notifyReason = '3 天提醒節點';
+        } else if (daysUntilExpiry === 1) {
+          notifyReason = '最後 1 天提醒';
+        }
+
+        console.log(`✅ ${logPrefix} 需要通知 - ${notifyReason}`);
+        console.log(`   - 到期日: ${userBenefit.periodEnd.toLocaleDateString('zh-TW')} (還有 ${daysUntilExpiry} 天)`);
+        console.log(`   - 使用者設定: ${userReminderDays} 天前開始提醒`);
 
         expiringBenefits.push({
           userBenefit,
           benefit,
           benefitId,
-          daysRemaining,
+          daysRemaining: daysUntilExpiry,
         });
+      } else if (daysUntilExpiry > userReminderDays) {
+        console.log(`⏰ ${logPrefix} 尚未到提醒時間`);
+        console.log(`   - 到期日: ${userBenefit.periodEnd.toLocaleDateString('zh-TW')} (還有 ${daysUntilExpiry} 天)`);
+        console.log(`   - 使用者設定: ${userReminderDays} 天前開始提醒 (還要等 ${daysUntilExpiry - userReminderDays} 天)`);
+      } else if (daysUntilExpiry <= 0) {
+        console.log(`⏭️  ${logPrefix} 跳過 - 已超過到期日`);
+        console.log(`   - 到期日: ${userBenefit.periodEnd.toLocaleDateString('zh-TW')}`);
+      } else {
+        // 在提醒時間內，但不在提醒節點
+        const nextMilestone = daysUntilExpiry > 3 ? 3 : (daysUntilExpiry > 1 ? 1 : null);
+        console.log(`⏭️  ${logPrefix} 不在提醒節點 (下次提醒: ${nextMilestone ? nextMilestone + ' 天' : '無'})`);
+        console.log(`   - 到期日: ${userBenefit.periodEnd.toLocaleDateString('zh-TW')} (還有 ${daysUntilExpiry} 天)`);
+        console.log(`   - 使用者設定: ${userReminderDays} 天前開始提醒`);
       }
     }
+
+    console.log(`\n📊 檢查完成: ${expiringBenefits.length} 個福利需要通知\n`);
 
     // 第二步：按使用者分組
     const benefitsByUser = new Map<number, typeof expiringBenefits>();

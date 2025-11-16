@@ -183,9 +183,7 @@ router.get('/my', authenticate, async (req: AuthRequest, res) => {
         },
       },
       orderBy: {
-        card: {
-          displayPriority: 'asc',
-        },
+        displayOrder: 'asc',
       },
     });
 
