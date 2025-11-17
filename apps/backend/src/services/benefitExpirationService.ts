@@ -232,7 +232,7 @@ export async function checkAndNotifyExpiringBenefits() {
           usersNotified: notificationsSent,
           errors,
           testMode: TEST_MODE,
-          testUserId: TEST_MODE ? TEST_USER_ID : null,
+          testUserId: TEST_MODE ? TEST_USER_IDS[0] : null,
         }),
       },
     });
@@ -243,7 +243,7 @@ export async function checkAndNotifyExpiringBenefits() {
     console.log(`   - Users notified: ${notificationsSent}`);
     console.log(`   - Errors: ${errors}`);
     if (TEST_MODE) {
-      console.log(`   - 🧪 TEST MODE: Only sent to user ${TEST_USER_ID}`);
+      console.log(`   - 🧪 TEST MODE: Only sent to user ${TEST_USER_IDS[0]}`);
     }
 
     return {

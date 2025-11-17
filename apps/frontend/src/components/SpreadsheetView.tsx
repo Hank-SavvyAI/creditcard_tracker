@@ -47,7 +47,11 @@ interface UserBenefit {
   benefit: Benefit & { card: Card }
 }
 
-export default function SpreadsheetView() {
+interface SpreadsheetViewProps {
+  showHiddenBenefits: boolean
+}
+
+export default function SpreadsheetView({ showHiddenBenefits }: SpreadsheetViewProps) {
   const router = useRouter()
   const { language } = useLanguageStore()
   const [data, setData] = useState<UserBenefit[]>([])
@@ -128,10 +132,6 @@ export default function SpreadsheetView() {
 
   const t = translations[language]
 
-  useEffect(() => {
-    loadData()
-  }, [])
-
   const loadData = async () => {
     try {
       const token = localStorage.getItem('token')
@@ -150,6 +150,14 @@ export default function SpreadsheetView() {
             const userBenefit = benefit.userBenefits && benefit.userBenefits.length > 0
               ? benefit.userBenefits[0]
               : null
+
+            // Check if benefit is hidden
+            const isHidden = userBenefit && userBenefit.isHidden
+
+            // Skip hidden benefits unless showHiddenBenefits is true
+            if (isHidden && !showHiddenBenefits) {
+              continue
+            }
 
             // Get usages from all userBenefits (all cycles for spreadsheet view)
             let usages: BenefitUsage[] = []
@@ -219,6 +227,11 @@ export default function SpreadsheetView() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    loadData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showHiddenBenefits])
 
   const formatPeriodEnd = (item: UserBenefit) => {
     // 如果有 periodEnd，直接使用
@@ -437,8 +450,10 @@ export default function SpreadsheetView() {
 
               const rows: JSX.Element[] = []
               let globalIndex = 0
+              let cardIndex = 0
 
               cardGroups.forEach((benefits) => {
+                cardIndex++
                 benefits.forEach((item, benefitIndex) => {
                   const remaining = item.benefit.totalAmount - (item.usedAmount || 0)
                   const rowStyle = {
@@ -469,14 +484,33 @@ export default function SpreadsheetView() {
                             }}
                             rowSpan={totalCardRows}
                           >
-                            <div>
+                            <div style={{ position: 'relative' }}>
+                              {/* 卡片編號徽章 */}
+                              <span style={{
+                                display: 'inline-block',
+                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                color: 'white',
+                                fontSize: '0.7rem',
+                                fontWeight: 'bold',
+                                borderRadius: '50%',
+                                width: '20px',
+                                height: '20px',
+                                lineHeight: '20px',
+                                textAlign: 'center',
+                                marginRight: '0.5rem',
+                                boxShadow: '0 2px 4px rgba(102, 126, 234, 0.3)',
+                                verticalAlign: 'middle'
+                              }}>
+                                {cardIndex}
+                              </span>
                               <div
                                 style={{
                                   fontWeight: '600',
                                   cursor: 'pointer',
                                   color: '#3b82f6',
                                   textDecoration: 'underline',
-                                  marginBottom: '0.5rem'
+                                  marginBottom: '0.5rem',
+                                  display: 'inline'
                                 }}
                                 onClick={() => handleCardClick(item.benefit.card.userCardId)}
                               >

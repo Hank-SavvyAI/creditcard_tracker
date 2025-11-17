@@ -397,7 +397,7 @@ export default function Dashboard() {
       <NotificationSettings language={language as 'zh-TW' | 'en'} />
 
       {viewMode === 'spreadsheet' ? (
-        <SpreadsheetView />
+        <SpreadsheetView showHiddenBenefits={showHiddenBenefits} />
       ) : userCards.length === 0 ? (
         <p>
           {language === 'zh-TW'
@@ -422,8 +422,30 @@ export default function Dashboard() {
               alignItems: 'flex-start',
               backgroundColor,
               border: `${borderWidth} solid ${borderColor}`,
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)'
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+              position: 'relative'
             }}>
+              {/* 卡片編號徽章 */}
+              <span style={{
+                position: 'absolute',
+                top: '-12px',
+                left: '-12px',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                fontSize: '0.85rem',
+                fontWeight: 'bold',
+                borderRadius: '50%',
+                width: '32px',
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 8px rgba(102, 126, 234, 0.4)',
+                zIndex: 10,
+                border: '3px solid white'
+              }}>
+                {index + 1}
+              </span>
               {/* 左側：卡片圖片 + 展開按鈕 */}
               {userCard.card.photo && (
                 <div style={{ flexShrink: 0, width: '200px', display: 'flex', flexDirection: 'column', gap: '0.75rem' }} className="card-image-container">

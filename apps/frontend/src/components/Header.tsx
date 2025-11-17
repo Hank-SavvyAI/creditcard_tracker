@@ -142,14 +142,6 @@ export default function Header() {
             }}>
               {language === 'zh-TW' ? '首頁' : 'Home'}
             </Link>
-            <Link href="/cards" className="nav-link-cards" style={{
-              textDecoration: 'none',
-              color: 'var(--foreground)',
-              fontWeight: pathname === '/cards' ? 'bold' : 'normal',
-            }}>
-              <span className="nav-full">{language === 'zh-TW' ? '新增信用卡' : 'Add Card'}</span>
-              <span className="nav-short">{language === 'zh-TW' ? '+卡' : '+Card'}</span>
-            </Link>
             {isMounted && user && (
               <Link href="/dashboard" className="nav-link-dashboard" style={{
                 textDecoration: 'none',
@@ -160,6 +152,14 @@ export default function Header() {
                 <span className="nav-short">{language === 'zh-TW' ? '卡片' : 'Cards'}</span>
               </Link>
             )}
+            <Link href="/cards" className="nav-link-cards" style={{
+              textDecoration: 'none',
+              color: 'var(--foreground)',
+              fontWeight: pathname === '/cards' ? 'bold' : 'normal',
+            }}>
+              <span className="nav-full">{language === 'zh-TW' ? '新增信用卡' : 'Add Card'}</span>
+              <span className="nav-short">{language === 'zh-TW' ? '+卡' : '+Card'}</span>
+            </Link>
           </nav>
         </div>
 
