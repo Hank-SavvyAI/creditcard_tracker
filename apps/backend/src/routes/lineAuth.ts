@@ -57,14 +57,11 @@ router.get('/token', async (req, res) => {
       return res.status(401).json({ error: 'Invalid token' });
     }
 
-    // Check if token was already used - but if yes, check if it was recent (within 10 seconds)
-    // This handles the case where user clicks twice or browser refreshes
+    // Allow token to be used multiple times (like LINE OAuth)
+    // This allows users to re-login with the same QR code link
     if (loginToken.used) {
-      const timeSinceCreation = Date.now() - loginToken.createdAt.getTime();
-      if (timeSinceCreation > 10000) { // More than 10 seconds ago
-        return res.status(401).json({ error: 'Token already used' });
-      }
-      // If used within 10 seconds, regenerate the same JWT and redirect
+      console.log('Token already used, but allowing re-login');
+      // Regenerate JWT and redirect
       const jwtToken = jwt.sign(
         {
           id: loginToken.user.id,
@@ -76,7 +73,6 @@ router.get('/token', async (req, res) => {
       );
 
       // Redirect with token in query parameter
-      // Token will be cleared from URL immediately after being read by frontend
       const frontendUrl = process.env.FRONTEND_URL || 'https://cards.savvyaihelper.com';
       return res.redirect(`${frontendUrl}/auth/auto-login?token=${jwtToken}`);
     }

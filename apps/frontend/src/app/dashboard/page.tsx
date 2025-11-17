@@ -379,8 +379,8 @@ export default function Dashboard() {
               }}
             >
               {showHiddenBenefits
-                ? (language === 'zh-TW' ? '👁️ 顯示隱藏' : '👁️ Show Hidden')
-                : (language === 'zh-TW' ? '🙈 已過濾' : '🙈 Filtered')}
+                ? (language === 'zh-TW' ? '👁️ 顯示已隱藏福利' : '👁️ Show Hidden')
+                : (language === 'zh-TW' ? <span style={{ fontSize: '0.85em' }}>🙈 已過濾隱藏福利</span> : '🙈 Filtered')}
             </button>
           </div>
           {isAdmin && (

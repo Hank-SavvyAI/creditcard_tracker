@@ -424,7 +424,7 @@ export default function BenefitItem({ benefit, userCardId, language, year, onTog
             >
               {isHidden
                 ? (language === 'zh-TW' ? '👁️ 顯示' : '👁️ Show')
-                : (language === 'zh-TW' ? '🙈 隱藏' : '🙈 Hide')}
+                : (language === 'zh-TW' ? '🙈 隱藏此福利' : '🙈 Hide')}
             </button>
           )}
         </div>
