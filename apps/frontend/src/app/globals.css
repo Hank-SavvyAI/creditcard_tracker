@@ -1495,18 +1495,32 @@ body {
     display: none !important;
   }
 
-  /* Navigation: show short text */
-  .nav-full {
+  /* Navigation: keep full text for "My Cards", show short text for others */
+  .nav-link-cards .nav-full {
     display: none !important;
   }
 
-  .nav-short {
+  .nav-link-cards .nav-short {
     display: inline !important;
   }
 
+  /* Keep "我的卡片" full text on mobile */
+  .nav-link-dashboard .nav-full {
+    display: inline !important;
+  }
+
+  .nav-link-dashboard .nav-short {
+    display: none !important;
+  }
+
   .header-nav {
-    gap: 0.75rem !important;
-    font-size: 0.9rem !important;
+    gap: 0.5rem !important;
+    font-size: 0.75rem !important;
+  }
+
+  /* Make all header text smaller */
+  .header-nav a {
+    font-size: 0.75rem !important;
   }
 
   /* Language switcher smaller */
@@ -1518,9 +1532,9 @@ body {
   }
 
   .lang-btn {
-    padding: 4px 10px !important;
+    padding: 4px 4px !important;
     border-radius: 6px !important;
-    font-size: 0.75rem !important;
+    font-size: 0.3rem !important;
   }
 
   /* User button smaller */

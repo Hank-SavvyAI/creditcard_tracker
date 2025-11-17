@@ -148,7 +148,7 @@ export default function Header() {
               fontWeight: pathname === '/cards' ? 'bold' : 'normal',
             }}>
               <span className="nav-full">{language === 'zh-TW' ? '新增信用卡' : 'Add Card'}</span>
-              <span className="nav-short">{language === 'zh-TW' ? '新增' : 'Add'}</span>
+              <span className="nav-short">{language === 'zh-TW' ? '+卡' : '+Card'}</span>
             </Link>
             {isMounted && user && (
               <Link href="/dashboard" className="nav-link-dashboard" style={{
