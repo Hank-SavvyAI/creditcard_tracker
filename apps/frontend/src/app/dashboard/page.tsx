@@ -379,7 +379,7 @@ export default function Dashboard() {
               }}
             >
               {showHiddenBenefits
-                ? (language === 'zh-TW' ? '👁️ 顯示已隱藏福利' : '👁️ Show Hidden')
+                ? (language === 'zh-TW' ? <span style={{ fontSize: '0.85em' }}>👁️ 顯示已隱藏福利</span> : '👁️ Show Hidden')
                 : (language === 'zh-TW' ? <span style={{ fontSize: '0.85em' }}>🙈 已過濾隱藏福利</span> : '🙈 Filtered')}
             </button>
           </div>
