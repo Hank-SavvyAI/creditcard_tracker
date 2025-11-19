@@ -139,7 +139,7 @@ export default function NewBenefitPage() {
             <h3>基本資訊</h3>
 
             <div className="form-group">
-              <label>福利類別 (繁中) *</label>
+              <label>福利類別 (中文) *</label>
               <input
                 type="text"
                 name="category"
@@ -178,7 +178,7 @@ export default function NewBenefitPage() {
             </div>
 
             <div className="form-group">
-              <label>福利標題 (繁中) *</label>
+              <label>福利標題 (中文) *</label>
               <input
                 type="text"
                 name="title"
@@ -201,7 +201,7 @@ export default function NewBenefitPage() {
             </div>
 
             <div className="form-group">
-              <label>詳細說明 (繁中) *</label>
+              <label>詳細說明 (中文) *</label>
               <textarea
                 name="description"
                 value={formData.description}

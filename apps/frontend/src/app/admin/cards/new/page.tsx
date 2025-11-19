@@ -74,7 +74,7 @@ export default function NewCardPage() {
             <h3>基本資訊</h3>
 
             <div className="form-group">
-              <label>卡片名稱 (繁中) *</label>
+              <label>卡片名稱 (中文) *</label>
               <input
                 type="text"
                 name="name"
@@ -97,7 +97,7 @@ export default function NewCardPage() {
             </div>
 
             <div className="form-group">
-              <label>銀行名稱 (繁中) *</label>
+              <label>銀行名稱 (中文) *</label>
               <input
                 type="text"
                 name="bank"
@@ -178,7 +178,7 @@ export default function NewCardPage() {
             <h3>詳細說明</h3>
 
             <div className="form-group">
-              <label>卡片描述 (繁中)</label>
+              <label>卡片描述 (中文)</label>
               <textarea
                 name="description"
                 value={formData.description}

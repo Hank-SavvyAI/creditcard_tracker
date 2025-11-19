@@ -57,7 +57,7 @@ export const translations = {
     'home.feature.track': '追蹤各種信用卡福利',
     'home.feature.reminder': '自動提醒到期日',
     'home.feature.checkbox': '勾選已使用的福利',
-    'home.feature.multilang': '多語言支援（繁中/英文）',
+    'home.feature.multilang': '多語言支援（中文/英文）',
     'home.feature.telegram': 'Telegram Bot 整合',
     'home.howto': '如何開始使用？',
     'home.step1': '使用 Telegram/Gmail/Line 帳號登入',

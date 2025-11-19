@@ -15,7 +15,7 @@ export default function LanguageSwitcher() {
   if (!isMounted) {
     return (
       <div className="language-switcher">
-        <button className="lang-btn">繁中</button>
+        <button className="lang-btn">中文</button>
         <button className="lang-btn">EN</button>
       </div>
     )
@@ -27,7 +27,7 @@ export default function LanguageSwitcher() {
         onClick={() => setLanguage('zh-TW')}
         className={`lang-btn ${language === 'zh-TW' ? 'active' : ''}`}
       >
-        繁中
+        中文
       </button>
       <button
         onClick={() => setLanguage('en')}
