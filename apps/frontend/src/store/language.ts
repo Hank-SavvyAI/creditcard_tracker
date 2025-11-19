@@ -8,10 +8,25 @@ interface LanguageState {
   setLanguage: (lang: Language) => void
 }
 
+// 檢測瀏覽器語言，預設為繁體中文
+const detectBrowserLanguage = (): Language => {
+  if (typeof window === 'undefined') return 'zh-TW'
+
+  const browserLang = navigator.language || (navigator as any).userLanguage
+
+  // 如果是中文相關語言（繁體、簡體、香港等），顯示繁體中文
+  if (browserLang.startsWith('zh')) {
+    return 'zh-TW'
+  }
+
+  // 其他語言顯示英文
+  return 'en'
+}
+
 export const useLanguageStore = create<LanguageState>()(
   persist(
     (set) => ({
-      language: 'zh-TW',
+      language: detectBrowserLanguage(),
       setLanguage: (lang) => set({ language: lang }),
     }),
     {
