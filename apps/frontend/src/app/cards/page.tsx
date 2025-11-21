@@ -3,7 +3,9 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { api } from '@/lib/api'
-import { useLanguageStore, t } from '@/store/language'
+import { useLanguageStore } from '@/store/language'
+import { useDataManager } from '@/hooks/useDataManager'
+import GuestModeBanner from '@/components/GuestModeBanner'
 
 export default function CardsPage() {
   const { language } = useLanguageStore()
@@ -22,6 +24,9 @@ export default function CardsPage() {
   const [pendingCard, setPendingCard] = useState<any>(null)
   const [benefitStartDates, setBenefitStartDates] = useState<Record<number, string>>({})
 
+  // 使用 DataManager（支援訪客模式和登入模式）
+  const dataManager = useDataManager(isLoggedIn)
+
   const toggleCardExpand = (cardId: number) => {
     setExpandedCards(prev => {
       const newSet = new Set(prev)
@@ -37,24 +42,28 @@ export default function CardsPage() {
   useEffect(() => {
     const token = localStorage.getItem('token')
     setIsLoggedIn(!!token)
-    loadCards()
   }, [])
 
+  useEffect(() => {
+    if (dataManager) {
+      loadCards()
+    }
+  }, [dataManager])
+
   async function loadCards() {
+    if (!dataManager) return
+
     try {
-      // 即使未登入也可以瀏覽信用卡列表
+      // 即使未登入也可以瀏覽信用卡列表（從公開 API 取得）
       const data = await api.getCards()
       setCards(data)
 
-      // 如果已登入，載入用戶的追蹤卡片
-      const token = localStorage.getItem('token')
-      if (token) {
-        try {
-          const myCards = await api.getMyCards()
-          setUserCards(myCards)
-        } catch (err) {
-          console.error('Failed to load user cards:', err)
-        }
+      // 載入用戶的追蹤卡片（不論登入與否，都使用 DataManager）
+      try {
+        const myCards = await dataManager.getMyCards()
+        setUserCards(myCards)
+      } catch (err) {
+        console.error('Failed to load user cards:', err)
       }
     } catch (err) {
       setError(language === 'zh-TW' ? '無法載入信用卡資料' : 'Failed to load credit cards')
@@ -94,9 +103,7 @@ export default function CardsPage() {
   }
 
   async function removeOneCard(cardId: number) {
-    if (!isLoggedIn) {
-      return
-    }
+    if (!dataManager) return
 
     const trackedCards = userCards.filter(uc => uc.card.id === cardId)
     if (trackedCards.length === 0) {
@@ -108,7 +115,7 @@ export default function CardsPage() {
 
     try {
       setTrackingCard(cardId)
-      await api.removeCard(cardToRemove.id)
+      await dataManager.removeCard(cardToRemove.id)
       // Reload cards to update the count
       await loadCards()
     } catch (error) {
@@ -120,8 +127,17 @@ export default function CardsPage() {
   }
 
   async function trackCard(cardId: number) {
-    if (!isLoggedIn) {
-      window.location.href = '/auth/telegram'
+    // 訪客模式也可以追蹤卡片（儲存在 localStorage）
+    // 但同一種卡片只能追蹤一張，如果已經追蹤過則提示登入
+
+    // 檢查是否已經追蹤過這張卡片
+    const alreadyTracked = getTrackingCount(cardId) > 0
+
+    // 未登入且已經追蹤過：提示登入以追蹤多張
+    if (!isLoggedIn && alreadyTracked) {
+      alert(language === 'zh-TW'
+        ? '此卡片已在追蹤中！\n\n登入後可以追蹤多張相同卡片。'
+        : 'This card is already being tracked!\n\nLogin to track multiple instances of the same card.')
       return
     }
 
@@ -147,9 +163,11 @@ export default function CardsPage() {
   }
 
   async function performTrackCard(cardId: number, startDates: Record<number, string>) {
+    if (!dataManager) return
+
     setTrackingCard(cardId)
     try {
-      await api.addCard(cardId, undefined, startDates)
+      await dataManager.addCard(cardId, undefined, startDates)
       alert(language === 'zh-TW' ? '已成功追蹤此信用卡！' : 'Card tracked successfully!')
       setShowDateModal(false)
       setPendingCard(null)
@@ -231,6 +249,9 @@ export default function CardsPage() {
 
   return (
     <div className="dashboard">
+      {/* 訪客模式提示橫幅 */}
+      <GuestModeBanner />
+
       <div className="dashboard-header">
         <h1>{language === 'zh-TW' ? '信用卡列表' : 'Credit Cards'}</h1>
         <div>
@@ -478,29 +499,31 @@ export default function CardsPage() {
                       </p>
                     )}
 
-                    {/* 追蹤按鈕 */}
-                    {isLoggedIn ? (
-                      <div style={{ width: '100%', marginBottom: '0.75rem' }}>
-                        {/* 追蹤標籤 */}
-                        <div style={{
-                          fontSize: '0.875rem',
-                          fontWeight: '600',
-                          color: '#64748b',
-                          marginBottom: '0.5rem',
-                          textAlign: 'center'
-                        }}>
-                          📌 {language === 'zh-TW' ? '追蹤此卡' : 'Track This Card'}
-                        </div>
+                    {/* 追蹤按鈕 - 不論是否登入都顯示 +/- 控制器 */}
+                    <div style={{ width: '100%', marginBottom: '0.75rem' }}>
+                      {/* 追蹤標籤 */}
+                      <div style={{
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        color: '#64748b',
+                        marginBottom: '0.5rem',
+                        textAlign: 'center'
+                      }} suppressHydrationWarning>
+                        📌 {isLoggedIn
+                          ? (language === 'zh-TW' ? '追蹤此卡' : 'Track This Card')
+                          : (language === 'zh-TW' ? '追蹤此卡 (存在瀏覽器)' : 'Track (Browser Only)')
+                        }
+                      </div>
 
-                        {/* 追蹤控制器 */}
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          border: '2px solid #e5e7eb',
-                          borderRadius: '8px',
-                          overflow: 'hidden'
-                        }}>
+                      {/* 追蹤控制器 */}
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        border: '2px solid #e5e7eb',
+                        borderRadius: '8px',
+                        overflow: 'hidden'
+                      }}>
                         {/* 減號按鈕 */}
                         <button
                           onClick={() => removeOneCard(card.id)}
@@ -541,7 +564,10 @@ export default function CardsPage() {
                         {/* 加號按鈕 */}
                         <button
                           onClick={() => trackCard(card.id)}
-                          disabled={trackingCard === card.id}
+                          disabled={
+                            trackingCard === card.id ||
+                            (!isLoggedIn && getTrackingCount(card.id) > 0)
+                          }
                           style={{
                             flex: '0 0 40px',
                             height: '40px',
@@ -550,27 +576,15 @@ export default function CardsPage() {
                             border: 'none',
                             fontSize: '1.25rem',
                             fontWeight: 'bold',
-                            cursor: trackingCard === card.id ? 'not-allowed' : 'pointer',
-                            opacity: trackingCard === card.id ? 0.4 : 1,
+                            cursor: (trackingCard === card.id || (!isLoggedIn && getTrackingCount(card.id) > 0)) ? 'not-allowed' : 'pointer',
+                            opacity: (trackingCard === card.id || (!isLoggedIn && getTrackingCount(card.id) > 0)) ? 0.4 : 1,
                             transition: 'all 0.2s'
                           }}
                         >
                           +
                         </button>
-                        </div>
                       </div>
-                    ) : (
-                      <button
-                        onClick={() => trackCard(card.id)}
-                        className="btn btn-primary"
-                        style={{
-                          width: '100%',
-                          marginBottom: '0.75rem'
-                        }}
-                      >
-                        {language === 'zh-TW' ? '登入以追蹤此卡' : 'Login to Track This Card'}
-                      </button>
-                    )}
+                    </div>
 
                     {/* 查看詳情按鈕 */}
                     <button

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import Header from '@/components/Header'
+import AnalyticsTracker from '@/components/AnalyticsTracker'
 
 export const metadata: Metadata = {
   title: 'Credit Card Benefits Tracker',
@@ -22,6 +23,7 @@ export default function RootLayout({
   return (
     <html lang="zh-TW">
       <body>
+        <AnalyticsTracker />
         <Header />
         {children}
       </body>

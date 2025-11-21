@@ -26,7 +26,9 @@ const detectBrowserLanguage = (): Language => {
 export const useLanguageStore = create<LanguageState>()(
   persist(
     (set) => ({
-      language: detectBrowserLanguage(),
+      // 伺服器端渲染時固定使用繁體中文，避免 hydration mismatch
+      // 客戶端會在 mount 後自動偵測並更新語言
+      language: typeof window !== 'undefined' ? detectBrowserLanguage() : 'zh-TW',
       setLanguage: (lang) => set({ language: lang }),
     }),
     {

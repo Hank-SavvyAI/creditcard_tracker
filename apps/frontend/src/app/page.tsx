@@ -6,7 +6,8 @@ import { useLanguageStore, t } from '@/store/language'
 import { api } from '@/lib/api'
 import {
   Box
-} from '@mui/material';
+} from '@mui/material'
+import GuestModeBanner from '@/components/GuestModeBanner'
 
 export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
@@ -64,8 +65,11 @@ export default function Home() {
 
   return (
     <div className="home-container">
-      <h1>{t('home.title', language)}</h1>
-      <h2>{t('home.title.en', language)}</h2>
+      {/* 訪客模式提示橫幅 */}
+      <GuestModeBanner />
+
+      <h1 suppressHydrationWarning>{t('home.title', language)}</h1>
+      <h2 suppressHydrationWarning>{t('home.title.en', language)}</h2>
 
       {/* 精簡的功能介紹 - 橫向排列 */}
       <div className="features-grid" style={{
@@ -78,19 +82,19 @@ export default function Home() {
       }}>
         <div style={{ textAlign: 'center', padding: '0.5rem' }}>
           <div style={{ fontSize: '2rem' }}>📇</div>
-          <div>{t('home.feature.manage', language)}</div>
+          <div suppressHydrationWarning>{t('home.feature.manage', language)}</div>
         </div>
         <div style={{ textAlign: 'center', padding: '0.5rem' }}>
           <div style={{ fontSize: '2rem' }}>🎁</div>
-          <div>{t('home.feature.track', language)}</div>
+          <div suppressHydrationWarning>{t('home.feature.track', language)}</div>
         </div>
         <div style={{ textAlign: 'center', padding: '0.5rem' }}>
           <div style={{ fontSize: '2rem' }}>⏰</div>
-          <div>{t('home.feature.reminder', language)}</div>
+          <div suppressHydrationWarning>{t('home.feature.reminder', language)}</div>
         </div>
         <div style={{ textAlign: 'center', padding: '0.5rem' }}>
           <div style={{ fontSize: '2rem' }}>🌍</div>
-          <div>{t('home.feature.multilang', language)}</div>
+          <div suppressHydrationWarning>{t('home.feature.multilang', language)}</div>
         </div>
       </div>
 
@@ -124,7 +128,7 @@ export default function Home() {
             }}
           >
             <span style={{ fontSize: '1.1rem' }}>💳</span>
-            {t('home.btn.browse', language)}
+            <span suppressHydrationWarning>{t('home.btn.browse', language)}</span>
           </Link>
         </div>
       )}
@@ -137,7 +141,7 @@ export default function Home() {
           background: '#f8f9fa',
           borderRadius: '12px',
         }}>
-          <h3 style={{ textAlign: 'center', marginBottom: '0.75rem', color: '#333', fontSize: '1.1rem' }}>
+          <h3 style={{ textAlign: 'center', marginBottom: '0.75rem', color: '#333', fontSize: '1.1rem' }} suppressHydrationWarning>
             {language === 'zh-TW' ? '🔐 選擇登入方式' : '🔐 Choose Login Method'}
           </h3>
           <div className="login-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
@@ -154,7 +158,7 @@ export default function Home() {
                 <span style={{ fontSize: '1.3rem' }}>💬</span>
                 {language === 'zh-TW' ? 'Telegram' : 'Telegram'}
               </h4>
-              <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.85rem', lineHeight: '1.5', flex: 1, color: '#666' }}>
+              <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.85rem', lineHeight: '1.5', flex: 1, color: '#666' }} suppressHydrationWarning>
                 {language === 'zh-TW' ? (
                   <>
                     • 即時收到福利提醒<br />
@@ -185,6 +189,7 @@ export default function Home() {
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.background = '#006699'}
                 onMouseLeave={(e) => e.currentTarget.style.background = '#0088cc'}
+                suppressHydrationWarning
               >
                 {language === 'zh-TW' ? '使用 Telegram 登入' : 'Sign in with Telegram'}
               </a>
@@ -203,7 +208,7 @@ export default function Home() {
                 <span style={{ fontSize: '1.3rem' }}>🌐</span>
                 {language === 'zh-TW' ? 'Google' : 'Google'}
               </h4>
-              <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.85rem', lineHeight: '1.5', flex: 1, color: '#666' }}>
+              <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.85rem', lineHeight: '1.5', flex: 1, color: '#666' }} suppressHydrationWarning>
                 {language === 'zh-TW' ? (
                   <>
                     • Email 提醒通知<br />
@@ -234,6 +239,7 @@ export default function Home() {
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.background = '#3367D6'}
                 onMouseLeave={(e) => e.currentTarget.style.background = '#4285F4'}
+                suppressHydrationWarning
               >
                 {language === 'zh-TW' ? '使用 Google 登入' : 'Sign in with Google'}
               </a>
@@ -252,7 +258,7 @@ export default function Home() {
                 <span style={{ fontSize: '1.3rem' }}>💚</span>
                 {language === 'zh-TW' ? 'LINE' : 'LINE'}
               </h4>
-              <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.85rem', lineHeight: '1.5', flex: 1, color: '#666' }}>
+              <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.85rem', lineHeight: '1.5', flex: 1, color: '#666' }} suppressHydrationWarning>
                 {language === 'zh-TW' ? (
                   <>
                     • 使用現有 LINE 帳號<br />
@@ -283,6 +289,7 @@ export default function Home() {
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.background = '#009900'}
                 onMouseLeave={(e) => e.currentTarget.style.background = '#00B900'}
+                suppressHydrationWarning
               >
                 {language === 'zh-TW' ? '使用 LINE 登入' : 'Sign in with LINE'}
               </a>
@@ -301,7 +308,7 @@ export default function Home() {
           borderRadius: '12px',
           boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
         }}>
-          <h3 style={{ textAlign: 'center', marginBottom: '1rem', color: '#333', fontSize: '1.1rem' }}>
+          <h3 style={{ textAlign: 'center', marginBottom: '1rem', color: '#333', fontSize: '1.1rem' }} suppressHydrationWarning>
             {language === 'zh-TW' ? '📱 掃描 QR Code 加入好友' : '📱 Scan QR Code to Add Friends'}
           </h3>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', maxWidth: '500px', margin: '0 auto' }}>
@@ -323,7 +330,7 @@ export default function Home() {
                   background: 'white',
                 }}
               />
-              <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#666' }}>
+              <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#666' }} suppressHydrationWarning>
                 {language === 'zh-TW' ? '掃描加入 LINE 好友' : 'Scan to add LINE friend'}
               </p>
             </div>
@@ -357,7 +364,7 @@ export default function Home() {
                   style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                 />
               </Box>
-              <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#666' }}>
+              <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#666' }} suppressHydrationWarning>
                 {language === 'zh-TW' ? '掃描加入 Telegram Bot' : 'Scan to join Telegram Bot'}
               </p>
             </div>
@@ -368,19 +375,19 @@ export default function Home() {
       {/* 已登入：顯示前往儀表板按鈕 */}
       {isMounted && isLoggedIn && (
         <div className="auth-buttons">
-          <Link href="/dashboard" className="btn-primary">
+          <Link href="/dashboard" className="btn-primary" suppressHydrationWarning>
             {t('home.btn.dashboard', language)}
           </Link>
         </div>
       )}
 
       <div className="info-section">
-        <h3>🚀 {t('home.howto', language)}</h3>
+        <h3 suppressHydrationWarning>🚀 {t('home.howto', language)}</h3>
         <ol>
-          <li>{t('home.step1', language)}</li>
-          <li>{t('home.step2', language)}</li>
-          <li>{t('home.step3', language)}</li>
-          <li>{t('home.step4', language)}</li>
+          <li suppressHydrationWarning>{t('home.step1', language)}</li>
+          <li suppressHydrationWarning>{t('home.step2', language)}</li>
+          <li suppressHydrationWarning>{t('home.step3', language)}</li>
+          <li suppressHydrationWarning>{t('home.step4', language)}</li>
         </ol>
       </div>
 
@@ -393,10 +400,10 @@ export default function Home() {
         borderRadius: '12px',
         textAlign: 'center',
       }}>
-        <h3 style={{ margin: '0 0 0.75rem 0', fontSize: '1.2rem', color: '#333' }}>
+        <h3 style={{ margin: '0 0 0.75rem 0', fontSize: '1.2rem', color: '#333' }} suppressHydrationWarning>
           💬 {language === 'zh-TW' ? '意見回饋 / 聯絡我們' : 'Feedback / Contact Us'}
         </h3>
-        <p style={{ margin: '0 0 1rem 0', fontSize: '0.9rem', color: '#666', lineHeight: '1.6' }}>
+        <p style={{ margin: '0 0 1rem 0', fontSize: '0.9rem', color: '#666', lineHeight: '1.6' }} suppressHydrationWarning>
           {language === 'zh-TW'
             ? '有任何問題、建議或是想要新增的信用卡？歡迎隨時與我們聯絡！'
             : 'Have questions, suggestions, or want to add a new credit card? Feel free to contact us!'
@@ -431,6 +438,7 @@ export default function Home() {
               e.currentTarget.style.transform = 'translateY(0)'
               e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)'
             }}
+            suppressHydrationWarning
           >
             📧 {language === 'zh-TW' ? '傳送訊息' : 'Send Message'}
           </button>
@@ -444,13 +452,13 @@ export default function Home() {
                 borderRadius: '8px',
                 textAlign: 'center',
                 fontWeight: '500',
-              }}>
+              }} suppressHydrationWarning>
                 ✅ {language === 'zh-TW' ? '感謝您的回饋！我們會盡快回覆您。' : 'Thank you for your feedback! We will get back to you soon.'}
               </div>
             ) : (
               <>
                 <div style={{ marginBottom: '1rem' }}>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }} suppressHydrationWarning>
                     {language === 'zh-TW' ? '姓名 *' : 'Name *'}
                   </label>
                   <input
@@ -470,7 +478,7 @@ export default function Home() {
                 </div>
 
                 <div style={{ marginBottom: '1rem' }}>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }} suppressHydrationWarning>
                     {language === 'zh-TW' ? 'Email *' : 'Email *'}
                   </label>
                   <input
@@ -490,7 +498,7 @@ export default function Home() {
                 </div>
 
                 <div style={{ marginBottom: '1rem' }}>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }} suppressHydrationWarning>
                     {language === 'zh-TW' ? '訊息 *' : 'Message *'}
                   </label>
                   <textarea
@@ -538,6 +546,7 @@ export default function Home() {
                       cursor: feedbackSubmitting ? 'not-allowed' : 'pointer',
                       transition: 'all 0.3s',
                     }}
+                    suppressHydrationWarning
                   >
                     {feedbackSubmitting
                       ? (language === 'zh-TW' ? '傳送中...' : 'Sending...')
@@ -560,6 +569,7 @@ export default function Home() {
                       fontSize: '1rem',
                       cursor: 'pointer',
                     }}
+                    suppressHydrationWarning
                   >
                     {language === 'zh-TW' ? '取消' : 'Cancel'}
                   </button>
@@ -582,9 +592,9 @@ export default function Home() {
       }}>
         <h3 style={{ margin: '0 0 0.75rem 0', fontSize: '1.2rem', color: '#E65100', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
           <span style={{ fontSize: '1.5rem' }}>☕</span>
-          {language === 'zh-TW' ? '支持我們的營運' : 'Support Our Operations'}
+          <span suppressHydrationWarning>{language === 'zh-TW' ? '支持我們的營運' : 'Support Our Operations'}</span>
         </h3>
-        <p style={{ margin: '0 0 1rem 0', fontSize: '0.9rem', color: '#666', lineHeight: '1.6' }}>
+        <p style={{ margin: '0 0 1rem 0', fontSize: '0.9rem', color: '#666', lineHeight: '1.6' }} suppressHydrationWarning>
           {language === 'zh-TW'
             ? '如果您覺得這個服務對您有幫助，歡迎贊助我們！您的贊助幫助我們持續改善服務，並保持系統運作，一杯咖啡的錢也非常感謝喔！'
             : 'If you find this service helpful, please consider supporting us! Your contribution helps us improve the service, add more credit card data, and keep the system running.'
@@ -619,13 +629,14 @@ export default function Home() {
             e.currentTarget.style.transform = 'translateY(0)'
             e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 112, 186, 0.3)'
           }}
+          suppressHydrationWarning
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
             <path d="M20.067 8.478c.492.88.556 2.014.3 3.327-.74 3.806-3.276 5.12-6.514 5.12h-.5a.805.805 0 00-.794.68l-.04.22-.63 3.993-.028.15a.805.805 0 01-.794.68H7.723c-.535 0-.97-.44-.97-.983 0-.056.005-.112.014-.166l2.214-14.022c.096-.616.63-1.077 1.25-1.077h3.617c2.48 0 4.154.515 4.98 1.533.39.48.64 1.02.768 1.617.036.167.065.337.088.51.024.174.042.35.054.53.01.164.014.33.014.497zm-1.14 3.322c-.74 3.806-3.276 5.12-6.514 5.12h-.5a.805.805 0 00-.794.68l-.04.22-.63 3.993-.028.15a.805.805 0 01-.794.68H7.723c-.535 0-.97-.44-.97-.983 0-.056.005-.112.014-.166l2.214-14.022c.096-.616.63-1.077 1.25-1.077h3.617c2.48 0 4.154.515 4.98 1.533a4.64 4.64 0 01.768 1.617c.036.167.065.337.088.51.024.174.042.35.054.53.256 1.313.192 2.447-.3 3.327z"/>
           </svg>
           {language === 'zh-TW' ? '透過 PayPal 贊助' : 'Donate via PayPal'}
         </a>
-        <p style={{ margin: '1rem 0 0 0', fontSize: '0.8rem', color: '#999' }}>
+        <p style={{ margin: '1rem 0 0 0', fontSize: '0.8rem', color: '#999' }} suppressHydrationWarning>
           {language === 'zh-TW'
             ? '每一份贊助都是對我們最大的鼓勵 ❤️'
             : 'Every donation is a great encouragement to us ❤️'

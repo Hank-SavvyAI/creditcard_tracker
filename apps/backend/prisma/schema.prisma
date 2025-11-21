@@ -32,6 +32,7 @@ model User {
   pushSubscriptions PushSubscription[]
   loginTokens   LoginToken[]
   notificationLogs NotificationLog[]
+  pageViews     PageView[]
 }
 
 model PushSubscription {
@@ -276,6 +277,26 @@ model NotificationLog {
   @@index([channel])
   @@index([status])
   @@index([sentAt])
+}
+
+model PageView {
+  id            Int             @id @default(autoincrement())
+  userId        Int?            // Optional: null for guest users
+  sessionId     String          // UUID to track same session
+  page          String          // e.g., "/", "/dashboard", "/cards"
+  referrer      String?         // Previous page URL
+  userAgent     String?         // Browser info
+  ipAddress     String?         // User IP (hashed for privacy)
+  country       String?         // Detected country
+  device        String?         // "desktop" | "mobile" | "tablet"
+  createdAt     DateTime        @default(now())
+
+  user          User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([page])
+  @@index([createdAt])
+  @@index([sessionId])
 }
 
 // SQLite doesn't support enums, use String with constants instead

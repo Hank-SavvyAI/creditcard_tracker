@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { getCurrentCycleLabel, getLocalTodayDate } from '@/lib/dateUtils'
+import { useDataManager } from '@/hooks/useDataManager'
+import type { BenefitUsage } from '@/lib/dataProvider/interface'
 
 interface BenefitItemProps {
   benefit: any
@@ -13,14 +15,17 @@ interface BenefitItemProps {
   onToggleHide?: (benefitId: number, isHidden: boolean, userCardId: number) => void
 }
 
-interface BenefitUsage {
-  id: number
-  amount: number
-  usedAt: string
-  note: string | null
-}
-
 export default function BenefitItem({ benefit, userCardId, language, year, onToggle, onUpdateSettings, onToggleHide }: BenefitItemProps) {
+  // 檢查是否登入
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+
+  useEffect(() => {
+    const user = localStorage.getItem('user')
+    setIsLoggedIn(!!user)
+  }, [])
+
+  const dataManager = useDataManager(isLoggedIn)
+
   const [showSettings, setShowSettings] = useState(false)
   const [showUsageForm, setShowUsageForm] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
@@ -51,67 +56,53 @@ export default function BenefitItem({ benefit, userCardId, language, year, onTog
   }, [benefit.id, year])
 
   const loadUsages = async () => {
+    if (!dataManager) return
+
     try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/benefits/${benefit.id}/usage?year=${year}&userCardId=${userCardId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setUsages(data.usages || [])
-        setUsedAmount(data.usedAmount || 0)
-      }
+      const data = await dataManager.getBenefitUsagesByContext(benefit.id, year, userCardId)
+      setUsages(data.usages || [])
+      setUsedAmount(data.usedAmount || 0)
     } catch (error) {
       console.error('Failed to load usages:', error)
     }
   }
 
   const handleAddUsage = async () => {
+    if (!dataManager) return
     if (!newUsage.amount || parseFloat(newUsage.amount) <= 0) {
       alert(language === 'zh-TW' ? '請輸入有效金額' : 'Please enter valid amount')
       return
     }
 
     try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/benefits/${benefit.id}/usage`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          year,
-          amount: parseFloat(newUsage.amount),
-          usedAt: newUsage.usedAt || getLocalTodayDate(),
-          note: newUsage.note || null,
-          userCardId,
-        }),
-      })
+      const data = await dataManager.addBenefitUsage(
+        benefit.id,
+        userCardId,
+        year,
+        parseFloat(newUsage.amount),
+        newUsage.usedAt || getLocalTodayDate(),
+        newUsage.note || undefined
+      )
 
-      if (response.ok) {
-        const data = await response.json()
-        if (data.isHistorical) {
-          // Added to history - show message and close form
-          alert(data.message || (language === 'zh-TW'
-            ? '此報銷記錄已添加到歷史記錄（該週期已過期）'
-            : 'This reimbursement has been added to history (cycle expired)'))
-          setShowUsageForm(false)
-        } else {
-          // Added to current cycle - update display
-          setUsages(data.usages || [])
-          setUsedAmount(data.usedAmount || 0)
-          setNewUsage({ amount: '', usedAt: getLocalTodayDate(), note: '' })
-          setShowUsageForm(false)
-
-          // Auto-complete if used amount >= total amount
-          const newUsedAmount = data.usedAmount || 0
-          if (newUsedAmount >= totalAmount && !completed) {
-            onToggle(benefit.id, false, userCardId)
-          }
-        }
+      // Check if isHistorical property exists (only in Cloud API response)
+      if ('isHistorical' in data && data.isHistorical) {
+        // Added to history - show message and close form
+        alert((language === 'zh-TW'
+          ? '此報銷記錄已添加到歷史記錄（該週期已過期）'
+          : 'This reimbursement has been added to history (cycle expired)'))
+        setShowUsageForm(false)
       } else {
-        alert(language === 'zh-TW' ? '新增失敗' : 'Failed to add usage')
+        // Added to current cycle - update display
+        setUsages(data.usages || [])
+        setUsedAmount(data.usedAmount || 0)
+        setNewUsage({ amount: '', usedAt: getLocalTodayDate(), note: '' })
+        setShowUsageForm(false)
+
+        // Auto-complete if used amount >= total amount
+        const newUsedAmount = data.usedAmount || 0
+        if (newUsedAmount >= totalAmount && !completed) {
+          onToggle(benefit.id, false, userCardId)
+        }
       }
     } catch (error) {
       console.error('Failed to add usage:', error)
@@ -120,24 +111,15 @@ export default function BenefitItem({ benefit, userCardId, language, year, onTog
   }
 
   const handleDeleteUsage = async (usageId: number) => {
+    if (!dataManager) return
     if (!confirm(language === 'zh-TW' ? '確定要刪除此紀錄？' : 'Delete this record?')) {
       return
     }
 
     try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/benefits/${benefit.id}/usage/${usageId}?year=${year}&userCardId=${userCardId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setUsages(data.usages || [])
-        setUsedAmount(data.usedAmount || 0)
-      } else {
-        alert(language === 'zh-TW' ? '刪除失敗' : 'Failed to delete usage')
-      }
+      const data = await dataManager.deleteBenefitUsage(usageId, benefit.id, year, userCardId)
+      setUsages(data.usages || [])
+      setUsedAmount(data.usedAmount || 0)
     } catch (error) {
       console.error('Failed to delete usage:', error)
       alert(language === 'zh-TW' ? '刪除失敗' : 'Failed to delete usage')

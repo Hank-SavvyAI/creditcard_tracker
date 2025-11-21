@@ -3,11 +3,12 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { api } from '@/lib/api'
 import { useLanguageStore } from '@/store/language'
+import { useDataManager } from '@/hooks/useDataManager'
 import BenefitItem from '@/components/BenefitItem'
 import SpreadsheetView from '@/components/SpreadsheetView'
 import NotificationSettings from '@/components/NotificationSettings'
+import GuestModeBanner from '@/components/GuestModeBanner'
 
 export default function Dashboard() {
   const { language } = useLanguageStore()
@@ -15,6 +16,7 @@ export default function Dashboard() {
   const [userCards, setUserCards] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [viewMode, setViewMode] = useState<'card' | 'spreadsheet'>('card')
   const [isInitialized, setIsInitialized] = useState(false)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
@@ -36,28 +38,40 @@ export default function Dashboard() {
   const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set())
   const [loadingCards, setLoadingCards] = useState<Set<number>>(new Set())
 
-  useEffect(() => {
-    const token = localStorage.getItem('token')
-    if (!token) {
-      router.push('/')
-      return
-    }
+  // 使用 DataManager（支援訪客模式和登入模式）
+  const dataManager = useDataManager(isLoggedIn)
 
-    // Check if user is admin
-    const storedUser = localStorage.getItem('user')
-    if (storedUser) {
-      const user = JSON.parse(storedUser)
-      setIsAdmin(user.role === 'ADMIN')
+  useEffect(() => {
+    // 檢查登入狀態
+    const token = localStorage.getItem('token')
+    const loggedIn = !!token
+    setIsLoggedIn(loggedIn)
+
+    // Check if user is admin (只有登入才有 admin 權限)
+    if (loggedIn) {
+      const storedUser = localStorage.getItem('user')
+      if (storedUser) {
+        const user = JSON.parse(storedUser)
+        setIsAdmin(user.role === 'ADMIN')
+      }
     }
 
     setIsInitialized(true)
-    loadData()
-  }, [router])
+  }, [])
+
+  // 當 dataManager 初始化完成後載入資料
+  useEffect(() => {
+    if (dataManager && isInitialized) {
+      loadData()
+    }
+  }, [dataManager, isInitialized])
 
   async function loadData(preserveExpanded = false) {
+    if (!dataManager) return
+
     try {
-      // 只載入卡片列表，不載入福利（懶加載優化）
-      const cards = await api.getMyCardsOnly()
+      // 使用 DataManager 載入卡片列表
+      const cards = await dataManager.getMyCards()
 
       if (preserveExpanded && expandedCards.size > 0) {
         // 保留已展開卡片的狀態，並重新載入它們的福利
@@ -66,7 +80,7 @@ export default function Dashboard() {
             if (expandedCards.has(card.id)) {
               // 重新載入已展開卡片的福利
               try {
-                const { benefits } = await api.getCardBenefits(card.id, year)
+                const { benefits } = await dataManager.getCardBenefits(card.id, year)
                 return { ...card, benefits }
               } catch (error) {
                 console.error('Failed to reload benefits for card:', card.id)
@@ -95,6 +109,8 @@ export default function Dashboard() {
 
   // 切換卡片展開/收合，並懶加載福利
   async function toggleCardExpansion(userCardId: number) {
+    if (!dataManager) return
+
     const isExpanded = expandedCards.has(userCardId)
 
     if (isExpanded) {
@@ -117,7 +133,7 @@ export default function Dashboard() {
       // 載入福利
       setLoadingCards(prev => new Set(prev).add(userCardId))
       try {
-        const { benefits } = await api.getCardBenefits(userCardId, year)
+        const { benefits } = await dataManager.getCardBenefits(userCardId, year)
 
         // 更新這張卡片的福利
         setUserCards(prev => prev.map(c =>
@@ -136,12 +152,10 @@ export default function Dashboard() {
   }
 
   async function toggleBenefit(benefitId: number, isCompleted: boolean, userCardId: number) {
+    if (!dataManager) return
+
     try {
-      if (isCompleted) {
-        await api.uncompleteBenefit(benefitId, year, userCardId)
-      } else {
-        await api.completeBenefit(benefitId, year, undefined, userCardId)
-      }
+      await dataManager.toggleBenefitComplete(benefitId, !isCompleted, year, userCardId)
       await loadData(true) // 保留展開狀態
     } catch (error) {
       console.error('Failed to toggle benefit:', error)
@@ -149,8 +163,10 @@ export default function Dashboard() {
   }
 
   async function updateNotificationSettings(benefitId: number, settings: { reminderDays?: number; notificationEnabled?: boolean }, userCardId: number) {
+    if (!dataManager) return
+
     try {
-      await api.updateBenefitSettings(benefitId, year, settings, userCardId)
+      await dataManager.updateBenefitSettings(benefitId, year, userCardId, settings)
       await loadData(true) // 保留展開狀態
     } catch (error) {
       console.error('Failed to update notification settings:', error)
@@ -159,12 +175,10 @@ export default function Dashboard() {
   }
 
   async function toggleHideBenefit(benefitId: number, isHidden: boolean, userCardId: number) {
+    if (!dataManager) return
+
     try {
-      if (isHidden) {
-        await api.unhideBenefit(benefitId, year, userCardId)
-      } else {
-        await api.hideBenefit(benefitId, year, userCardId)
-      }
+      await dataManager.toggleBenefitHidden(benefitId, !isHidden, year, userCardId)
       await loadData(true)
     } catch (error) {
       console.error('Failed to toggle benefit visibility:', error)
@@ -173,6 +187,8 @@ export default function Dashboard() {
   }
 
   async function removeCard(userCardId: number, cardName: string) {
+    if (!dataManager) return
+
     const confirmMessage = language === 'zh-TW'
       ? `確定要移除「${cardName}」的追蹤嗎？`
       : `Are you sure you want to stop tracking "${cardName}"?`
@@ -182,7 +198,7 @@ export default function Dashboard() {
     }
 
     try {
-      await api.removeCard(userCardId)
+      await dataManager.removeCard(userCardId)
       alert(language === 'zh-TW' ? '已移除追蹤' : 'Card removed successfully')
       await loadData(true)
     } catch (error) {
@@ -210,10 +226,10 @@ export default function Dashboard() {
   }
 
   async function saveCardSettings() {
-    if (!selectedCard) return
+    if (!selectedCard || !dataManager) return
 
     try {
-      await api.updateCardSettings(selectedCard.id, {
+      await dataManager.updateCardSettings(selectedCard.id, {
         nickname: nickname.trim() === '' ? undefined : nickname.trim(),
         afChargeMonth: afChargeMonth === '' ? null : afChargeMonth,
         afChargeDay: afChargeDay === '' ? null : afChargeDay,
@@ -249,6 +265,8 @@ export default function Dashboard() {
   }
 
   async function moveCard(userCardId: number, direction: 'up' | 'down') {
+    if (!dataManager) return
+
     const currentIndex = userCards.findIndex(uc => uc.id === userCardId)
     if (currentIndex === -1) return
 
@@ -279,7 +297,7 @@ export default function Dashboard() {
 
     try {
       // 背景更新，不阻塞 UI
-      await api.updateUserCardsOrder(updates)
+      await dataManager.updateCardsOrder(updates)
     } catch (error) {
       console.error('Failed to update card order:', error)
       alert(language === 'zh-TW' ? '排序更新失敗' : 'Failed to update card order')
@@ -289,13 +307,13 @@ export default function Dashboard() {
   }
 
   async function saveCustomBenefit() {
-    if (!customBenefitCard || customAmount === '' || !customPeriodEnd) {
+    if (!customBenefitCard || customAmount === '' || !customPeriodEnd || !dataManager) {
       alert(language === 'zh-TW' ? '請填寫所有必填欄位' : 'Please fill in all required fields')
       return
     }
 
     try {
-      await api.createCustomBenefit({
+      await dataManager.createCustomBenefit({
         userCardId: customBenefitCard.id,
         customTitle: '開卡禮/續卡禮',
         customTitleEn: 'Open/Retention Offer',
@@ -325,14 +343,17 @@ export default function Dashboard() {
   }
 
   if (!isInitialized || loading) {
-    return <div className="loading">{language === 'zh-TW' ? '載入中...' : 'Loading...'}</div>
+    return <div className="loading" suppressHydrationWarning>{language === 'zh-TW' ? '載入中...' : 'Loading...'}</div>
   }
 
   return (
     <div className="dashboard">
+      {/* 訪客模式提示橫幅 */}
+      <GuestModeBanner />
+
       <div className="dashboard-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-          <h1 style={{ margin: 0 }}>
+          <h1 style={{ margin: 0 }} suppressHydrationWarning>
             {language === 'zh-TW' ? `我的信用卡福利 (${year})` : `My Credit Card Benefits (${year})`}
           </h1>
           <div style={{
@@ -343,7 +364,7 @@ export default function Dashboard() {
             fontSize: '0.9rem',
             fontWeight: '600',
             boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-          }}>
+          }} suppressHydrationWarning>
             💳 {userCards.length} {language === 'zh-TW' ? '張卡片' : 'Cards'}
           </div>
         </div>
@@ -401,8 +422,8 @@ export default function Dashboard() {
       ) : userCards.length === 0 ? (
         <p>
           {language === 'zh-TW'
-            ? '您還沒有新增任何信用卡，請先使用 Telegram Bot 新增信用卡'
-            : 'You haven\'t added any credit cards yet. Please add cards using the Telegram Bot'}
+            ? '您還沒有新增任何信用卡，您還沒有新增任何信用卡，請先瀏覽並新增信用卡'
+            : 'You haven\'t added any credit cards yet. Please add cards via Add Card button above.'}
         </p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>

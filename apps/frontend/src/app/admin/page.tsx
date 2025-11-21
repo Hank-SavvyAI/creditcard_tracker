@@ -200,6 +200,9 @@ export default function AdminPage() {
           <Link href="/admin/stats" className="btn btn-secondary">
             📊 系統統計
           </Link>
+          <Link href="/admin/analytics" className="btn btn-secondary">
+            📈 網站分析
+          </Link>
           <button onClick={handleLogout} className="btn btn-secondary">
             登出
           </button>

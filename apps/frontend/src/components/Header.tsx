@@ -128,8 +128,8 @@ export default function Header() {
               gap: '0.5rem',
             }}>
               <span className="header-icon">💳</span>
-              <span className="header-title-full">{language === 'zh-TW' ? '信用卡福利追蹤' : 'Credit Card Tracker'}</span>
-              <span className="header-title-short">{language === 'zh-TW' ? '信用卡' : 'CC'}</span>
+              <span className="header-title-full" suppressHydrationWarning>{language === 'zh-TW' ? '信用卡福利追蹤' : 'Credit Card Tracker'}</span>
+              <span className="header-title-short" suppressHydrationWarning>{language === 'zh-TW' ? '信用卡' : 'CC'}</span>
             </h1>
           </Link>
 
@@ -139,26 +139,25 @@ export default function Header() {
               textDecoration: 'none',
               color: 'var(--foreground)',
               fontWeight: pathname === '/' ? 'bold' : 'normal',
-            }}>
+            }} suppressHydrationWarning>
               {language === 'zh-TW' ? '首頁' : 'Home'}
             </Link>
-            {isMounted && user && (
-              <Link href="/dashboard" className="nav-link-dashboard" style={{
-                textDecoration: 'none',
-                color: 'var(--foreground)',
-                fontWeight: pathname === '/dashboard' ? 'bold' : 'normal',
-              }}>
-                <span className="nav-full">{language === 'zh-TW' ? '我的卡片' : 'My Cards'}</span>
-                <span className="nav-short">{language === 'zh-TW' ? '卡片' : 'Cards'}</span>
-              </Link>
-            )}
+            {/* 我的卡片 - 不論登入與否都顯示 */}
+            <Link href="/dashboard" className="nav-link-dashboard" style={{
+              textDecoration: 'none',
+              color: 'var(--foreground)',
+              fontWeight: pathname === '/dashboard' ? 'bold' : 'normal',
+            }}>
+              <span className="nav-full" suppressHydrationWarning>{language === 'zh-TW' ? '我的卡片' : 'My Cards'}</span>
+              <span className="nav-short" suppressHydrationWarning>{language === 'zh-TW' ? '卡片' : 'Cards'}</span>
+            </Link>
             <Link href="/cards" className="nav-link-cards" style={{
               textDecoration: 'none',
               color: 'var(--foreground)',
               fontWeight: pathname === '/cards' ? 'bold' : 'normal',
             }}>
-              <span className="nav-full">{language === 'zh-TW' ? '新增信用卡' : 'Add Card'}</span>
-              <span className="nav-short">{language === 'zh-TW' ? '+卡' : '+Card'}</span>
+              <span className="nav-full" suppressHydrationWarning>{language === 'zh-TW' ? '新增信用卡' : 'Add Card'}</span>
+              <span className="nav-short" suppressHydrationWarning>{language === 'zh-TW' ? '+卡' : '+Card'}</span>
             </Link>
           </nav>
         </div>
@@ -216,7 +215,7 @@ export default function Header() {
                     padding: '1rem',
                     borderBottom: '1px solid var(--border-color)',
                   }}>
-                    <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--foreground-light)' }}>
+                    <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--foreground-light)' }} suppressHydrationWarning>
                       {language === 'zh-TW' ? '登入身份' : 'Logged in as'}
                     </p>
                     <p style={{ margin: 0, fontWeight: 'bold', marginTop: '0.25rem' }}>
@@ -241,6 +240,7 @@ export default function Header() {
                     onMouseLeave={(e) => {
                       e.currentTarget.style.background = 'transparent'
                     }}
+                    suppressHydrationWarning
                   >
                     {language === 'zh-TW' ? '登出' : 'Logout'}
                   </button>
@@ -259,6 +259,7 @@ export default function Header() {
                 cursor: 'pointer',
                 fontWeight: '500',
               }}
+              suppressHydrationWarning
             >
               {language === 'zh-TW' ? '登入' : 'Login'}
             </button>

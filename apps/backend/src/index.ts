@@ -18,6 +18,7 @@ import pushNotificationRoutes from './routes/pushNotifications';
 import feedbackRoutes from './routes/feedback';
 import lineWebhookRoutes from './routes/lineWebhook';
 import lineAuthRoutes from './routes/lineAuth';
+import analyticsRoutes from './routes/analytics';
 
 dotenv.config();
 
@@ -69,6 +70,7 @@ app.use('/api/push', pushNotificationRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/line', lineWebhookRoutes);
 app.use('/api/auth', lineAuthRoutes); // Auto-login endpoint (works for LINE, Telegram, Google)
+app.use('/api/analytics', analyticsRoutes);
 
 // Error handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
