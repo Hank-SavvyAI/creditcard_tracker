@@ -1,6 +1,6 @@
 // Web Push Notifications utilities
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9001';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8443';
 
 // Convert VAPID key from base64 to Uint8Array
 function urlBase64ToUint8Array(base64String: string): Uint8Array {

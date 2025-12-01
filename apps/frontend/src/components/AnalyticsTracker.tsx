@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8443'
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8443'
 
 // Get or create session ID
 function getSessionId(): string {

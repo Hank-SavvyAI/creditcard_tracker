@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import './analytics.css'
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8443'
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8443'
 
 interface PageBreakdown {
   page: string
