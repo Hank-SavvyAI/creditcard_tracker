@@ -66,8 +66,20 @@ export default function AnalyticsPage() {
     try {
       setLoading(true)
 
+      // Get auth token
+      const token = localStorage.getItem('token')
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      }
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+
       // Fetch stats
-      const statsResponse = await fetch(`${BACKEND_URL}/api/analytics/stats`)
+      const statsResponse = await fetch(`${BACKEND_URL}/api/analytics/stats`, {
+        headers,
+      })
       const statsData = await statsResponse.json()
 
       if (statsData.success) {
@@ -75,7 +87,9 @@ export default function AnalyticsPage() {
       }
 
       // Fetch recent views
-      const recentResponse = await fetch(`${BACKEND_URL}/api/analytics/recent?limit=50`)
+      const recentResponse = await fetch(`${BACKEND_URL}/api/analytics/recent?limit=50`, {
+        headers,
+      })
       const recentData = await recentResponse.json()
 
       if (recentData.success) {
