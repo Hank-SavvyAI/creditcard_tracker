@@ -63,6 +63,14 @@ export default function SpreadsheetView({ showHiddenBenefits }: SpreadsheetViewP
   const [afChargeDay, setAfChargeDay] = useState<number | ''>('')
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
+  // 消費記錄 modal 狀態
+  const [showUsageModal, setShowUsageModal] = useState(false)
+  const [selectedBenefit, setSelectedBenefit] = useState<UserBenefit | null>(null)
+  const [usageAmount, setUsageAmount] = useState<number | ''>('')
+  const [usageDate, setUsageDate] = useState('')
+  const [usageNote, setUsageNote] = useState('')
+  const [isSavingUsage, setIsSavingUsage] = useState(false)
+
   const translations = {
     'zh-TW': {
       title: '📊 信用卡福利總覽',
@@ -95,6 +103,11 @@ export default function SpreadsheetView({ showHiddenBenefits }: SpreadsheetViewP
       removeConfirm: '確定要移除此卡片的追蹤嗎？',
       removeSuccess: '已移除追蹤',
       removeFailed: '移除失敗',
+      addUsage: '填寫消費記錄',
+      addUsageTitle: '新增消費記錄',
+      save: '儲存',
+      cancel: '取消',
+      clickToAddUsage: '點擊填寫消費',
     },
     en: {
       title: '📊 Credit Card Benefits Overview',
@@ -127,6 +140,11 @@ export default function SpreadsheetView({ showHiddenBenefits }: SpreadsheetViewP
       removeConfirm: 'Are you sure you want to remove this card?',
       removeSuccess: 'Card removed successfully',
       removeFailed: 'Failed to remove card',
+      addUsage: 'Add Usage Record',
+      addUsageTitle: 'Add Usage Record',
+      save: 'Save',
+      cancel: 'Cancel',
+      clickToAddUsage: 'Click to add usage',
     },
   }
 
@@ -304,6 +322,78 @@ export default function SpreadsheetView({ showHiddenBenefits }: SpreadsheetViewP
     }
   }
 
+  // 打開消費記錄 modal
+  const openUsageModal = (benefit: UserBenefit) => {
+    setSelectedBenefit(benefit)
+    setUsageAmount('')
+    setUsageDate(new Date().toISOString().split('T')[0]) // 預設今天
+    setUsageNote('')
+    setShowUsageModal(true)
+  }
+
+  // 關閉消費記錄 modal
+  const closeUsageModal = () => {
+    // 如果正在儲存中，不允許關閉
+    if (isSavingUsage) {
+      return
+    }
+    setShowUsageModal(false)
+    setSelectedBenefit(null)
+    setUsageAmount('')
+    setUsageDate('')
+    setUsageNote('')
+  }
+
+  // 儲存消費記錄
+  const saveUsageRecord = async () => {
+    if (!selectedBenefit || !usageAmount || !usageDate) {
+      alert(language === 'zh-TW' ? '請填寫金額和日期' : 'Please fill in amount and date')
+      return
+    }
+
+    // 防止重複提交
+    if (isSavingUsage) {
+      return
+    }
+
+    setIsSavingUsage(true)
+
+    try {
+      const token = localStorage.getItem('token')
+      const year = new Date(usageDate).getFullYear()
+      const userCardId = selectedBenefit.benefit.card.userCardId
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/benefits/${selectedBenefit.benefitId}/usage?year=${year}&userCardId=${userCardId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          amount: Number(usageAmount),
+          usedAt: usageDate,
+          note: usageNote.trim() || null,
+          userCardId: userCardId, // 加入 body 中
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        console.error('API Error:', errorData)
+        throw new Error(errorData.error || 'Failed to save usage record')
+      }
+
+      alert(language === 'zh-TW' ? '消費記錄已儲存' : 'Usage record saved successfully')
+      closeUsageModal()
+      await loadData() // 重新載入資料
+    } catch (error: any) {
+      console.error('Failed to save usage record:', error)
+      alert(language === 'zh-TW' ? `儲存失敗：${error.message}` : `Failed to save: ${error.message}`)
+    } finally {
+      setIsSavingUsage(false)
+    }
+  }
+
   // Generate color based on benefit status
   const getBenefitColor = (item: UserBenefit) => {
     // 3 colors based on benefit status
@@ -469,7 +559,7 @@ export default function SpreadsheetView({ showHiddenBenefits }: SpreadsheetViewP
                   const benefitColor = getBenefitColor(item)
 
                   rows.push(
-                    <tr key={item.id} style={{ borderBottom: item.usages && item.usages.length > 0 ? 'none' : '1px solid #dee2e6' }}>
+                    <tr key={`benefit-${item.benefit.card.userCardId}-${item.benefitId}-${globalIndex}`} style={{ borderBottom: item.usages && item.usages.length > 0 ? 'none' : '1px solid #dee2e6' }}>
                       {benefitIndex === 0 && (
                         <>
                           <td
@@ -575,9 +665,22 @@ export default function SpreadsheetView({ showHiddenBenefits }: SpreadsheetViewP
                           </td>
                         </>
                       )}
-                      <td style={{ ...rowStyle, backgroundColor: benefitColor }}>
+                      <td
+                        style={{
+                          ...rowStyle,
+                          backgroundColor: benefitColor,
+                          cursor: 'pointer',
+                          fontWeight: '500',
+                          color: '#2563eb',
+                        }}
+                        onClick={() => openUsageModal(item)}
+                        title={t.clickToAddUsage}
+                      >
                         {item.isCustom && '🎁 '}
                         {item.benefit.name || '-'}
+                        <span style={{ marginLeft: '0.5rem', fontSize: '0.65rem', opacity: 0.7 }}>
+                          📝
+                        </span>
                       </td>
                       <td style={{ ...rowStyle, textAlign: 'right' }}>
                         {item.benefit.totalAmount != null
@@ -764,6 +867,162 @@ export default function SpreadsheetView({ showHiddenBenefits }: SpreadsheetViewP
                 }}
               >
                 {language === 'zh-TW' ? '儲存' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Usage Record Modal */}
+      {showUsageModal && selectedBenefit && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white',
+            padding: '2rem',
+            borderRadius: '12px',
+            width: '90%',
+            maxWidth: '500px',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+          }}>
+            <h2 style={{ marginBottom: '1rem', color: 'var(--primary-color)' }}>
+              📝 {t.addUsageTitle}
+            </h2>
+            <p style={{ marginBottom: '1.5rem', color: '#6b7280', fontSize: '0.9rem' }}>
+              {selectedBenefit.benefit.name}
+              <br />
+              <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>
+                {selectedBenefit.benefit.card.name}
+              </span>
+            </p>
+
+            {/* 使用日期 */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#374151' }}>
+                📅 {t.usageDate}
+              </label>
+              <input
+                type="date"
+                value={usageDate}
+                onChange={(e) => setUsageDate(e.target.value)}
+                disabled={isSavingUsage}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '8px',
+                  fontSize: '1rem',
+                  opacity: isSavingUsage ? 0.6 : 1,
+                  cursor: isSavingUsage ? 'not-allowed' : 'text',
+                }}
+              />
+            </div>
+
+            {/* 消費金額 */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#374151' }}>
+                💰 {t.usageAmount}
+              </label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ color: '#6b7280', fontWeight: '500' }}>
+                  {selectedBenefit.benefit.currency || 'TWD'}
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={usageAmount}
+                  onChange={(e) => setUsageAmount(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                  placeholder="0.00"
+                  disabled={isSavingUsage}
+                  style={{
+                    flex: 1,
+                    padding: '0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '8px',
+                    fontSize: '1rem',
+                    opacity: isSavingUsage ? 0.6 : 1,
+                    cursor: isSavingUsage ? 'not-allowed' : 'text',
+                  }}
+                />
+              </div>
+              {selectedBenefit.benefit.totalAmount && (
+                <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: '#6b7280' }}>
+                  {language === 'zh-TW' ? '剩餘額度：' : 'Remaining: '}
+                  {selectedBenefit.benefit.currency} {(selectedBenefit.benefit.totalAmount - (selectedBenefit.usedAmount || 0)).toFixed(2)}
+                </div>
+              )}
+            </div>
+
+            {/* 備註 */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#374151' }}>
+                📝 {t.usageNote} ({language === 'zh-TW' ? '選填' : 'Optional'})
+              </label>
+              <textarea
+                value={usageNote}
+                onChange={(e) => setUsageNote(e.target.value)}
+                placeholder={language === 'zh-TW' ? '例如：在某某餐廳用餐' : 'e.g., Dinner at restaurant'}
+                rows={3}
+                disabled={isSavingUsage}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '8px',
+                  fontSize: '1rem',
+                  resize: 'vertical',
+                  opacity: isSavingUsage ? 0.6 : 1,
+                  cursor: isSavingUsage ? 'not-allowed' : 'text',
+                }}
+              />
+            </div>
+
+            {/* Buttons */}
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+              <button
+                onClick={closeUsageModal}
+                disabled={isSavingUsage}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  background: isSavingUsage ? '#f3f4f6' : '#e5e7eb',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: isSavingUsage ? 'not-allowed' : 'pointer',
+                  fontWeight: '500',
+                  color: isSavingUsage ? '#9ca3af' : '#374151',
+                  opacity: isSavingUsage ? 0.6 : 1,
+                }}
+              >
+                {t.cancel}
+              </button>
+              <button
+                onClick={saveUsageRecord}
+                disabled={isSavingUsage}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  background: isSavingUsage ? '#9ca3af' : 'var(--primary-color)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: isSavingUsage ? 'not-allowed' : 'pointer',
+                  fontWeight: '500',
+                  opacity: isSavingUsage ? 0.6 : 1,
+                }}
+              >
+                {isSavingUsage
+                  ? (language === 'zh-TW' ? '儲存中...' : 'Saving...')
+                  : t.save}
               </button>
             </div>
           </div>
